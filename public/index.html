@@ -7,6 +7,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='17' fill='%232563EB'/%3E%3Cpath d='M27 13a10 10 0 1 0 2 9h-8' fill='none' stroke='%23fff' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='31' cy='9' r='5' fill='%23FFD43B'/%3E%3C/svg%3E">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <title>Gokski</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Noto+Sans+Georgian:wght@400;500;600;700;800&display=swap">
 <style>
@@ -421,6 +423,8 @@ main.home{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
 .qs{display:grid;gap:16px}
 .q h4{margin:0 0 8px;font-size:16px}
 .q .opt{font-size:15px;padding:12px 14px}
+.chip.off{padding:5px 8px;font-size:14px;background:var(--bad-bg);box-shadow:0 0 0 1px var(--bad) inset}
+.offnote{background:var(--bad-bg);box-shadow:0 0 0 1px var(--bad) inset;color:var(--ink);font-weight:600;font-size:14px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -584,12 +588,7 @@ if (tg){
   try { const dark = tg.colorScheme === 'dark'; tg.setHeaderColor(dark ? '#0A1226' : '#EEF3FF'); tg.setBackgroundColor(dark ? '#0A1226' : '#EEF3FF'); } catch(e) {}
   try { tg.onEvent('themeChanged', ()=>{ document.documentElement.dataset.theme = tg.colorScheme === 'dark' ? 'dark' : 'light'; }); } catch(e) {}
   try { tg.BackButton.onClick(()=>{ if (document.querySelector('.modal')) { document.querySelector('.modal').remove(); return; } goBack(); }); } catch(e) {}
-  try { cloudLoad(remote => {
-    if (remote) { try { S = mergeState(S, remote); } catch(e) { console.error(e); } }
-    cloudReady = true; srsDirty = true; refreshDay();
-    if (!FULLSCREEN.includes(view)) render();
-    booted = true; syncServer(); bootNotes();
-  }); } catch(e) { cloudReady = true; }
+  cloudBoot();
 }
 function syncBack(){ try { if (!tg) return; if (FULLSCREEN.includes(view)) tg.BackButton.show(); else tg.BackButton.hide(); } catch(e) {} }
 
@@ -736,7 +735,7 @@ let view = 'path', L = null;
 function topBar(){
   return `<header class="top"><div class="wrap">
     <div class="logo">${LOGO}<span>Gok<em>ski</em></span></div>
-    <span class="chip c-fire" title="დღეები ზედიზედ">${ICON.flame}${S.streak}</span>
+    ${netChip()}<span class="chip c-fire" title="დღეები ზედიზედ">${ICON.flame}${S.streak}</span>
     <span class="chip c-xp" title="სულ XP">${ICON.bolt}${S.xp}</span>
     <span class="chip c-heart" title="სიცოცხლეები">${ICON.heart}${S.hearts}</span>
   </div></header>`;
@@ -976,7 +975,7 @@ function outOfHearts(before){
 const canRecord = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
 const NOSPEAK_KEY = 'gokski-nospeak', MIC_IDLE = 'დააჭირე, თქვი წინადადება და ისევ დააჭირე';
 let micBroken = false, rec = null, recTimer = null;
-function speakOn(){ if (!canRecord || micBroken) return false; try { return Date.now() > +(localStorage.getItem(NOSPEAK_KEY) || 0); } catch(e) { return true; } }
+function speakOn(){ if (!canRecord || micBroken || !online()) return false; try { return Date.now() > +(localStorage.getItem(NOSPEAK_KEY) || 0); } catch(e) { return true; } }
 function setMic(state, text){
   const b = $('#mic'), h = $('#micHint'); if (!b) return;
   b.classList.toggle('rec', state==='rec'); b.classList.toggle('busy', state==='busy'); b.disabled = state==='busy';

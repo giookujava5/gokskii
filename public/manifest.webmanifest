@@ -1,0 +1,10 @@
+{
+  "name": "Gokski — ინგლისური ქართულად",
+  "short_name": "Gokski",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EEF3FF",
+  "theme_color": "#2563EB",
+  "lang": "ka",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

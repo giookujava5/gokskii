@@ -112,7 +112,7 @@ export default {
     if (!p.startsWith('/api/')) return env.ASSETS.fetch(request);
     try {
       if (p === '/api/tg') return await telegramWebhook(request, env, ctx);
-      if (request.method !== 'POST') return json({ error: 'Use POST' }, 405);
+      if (request.method !== 'POST' && !(p === '/api/tts' && request.method === 'GET')) return json({ error: 'Use POST' }, 405);
       const auth = await authenticate(request, env);
       if (auth instanceof Response) return auth;
       if (p === '/api/stt') return await apiStt(request, env, auth);
@@ -198,11 +198,11 @@ async function transcribe(env, audio, type) {
 
 // ====================== TEXT TO SPEECH ======================
 async function apiTts(request, env, ctx, auth) {
-  const body = await request.json().catch(() => ({}));
+  const body = request.method === 'GET' ? Object.fromEntries(new URL(request.url).searchParams) : await request.json().catch(() => ({}));
   const text = String(body.text || '').trim().slice(0, 400);
   if (!text) return json({ error: 'Empty text' }, 400);
   const voice = VOICES.includes(body.voice) ? body.voice : 'nova';
-  const speed = body.slow ? 0.72 : 1;
+  const speed = body.slow === true || body.slow === '1' ? 0.72 : 1;
   const cache = caches.default;
   const key = new Request(`https://tts.gokski.cache/${await sha(`${env.TTS_MODEL || 'tts-1'}|${voice}|${speed}|${text}`)}`);
   const hit = await cache.match(key);

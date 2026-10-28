@@ -194,25 +194,26 @@ function cloudPut() {
   const main = Object.assign({}, S); delete main.srs; delete main.frozeNote; delete main.decayNote;
   let js = JSON.stringify(main);
   if (js.length > 4000) { main.mistakes = (main.mistakes || []).slice(-15); const h = {}; Object.keys(main.hist).sort((a, b) => b - a).slice(0, 10).forEach(k => h[k] = main.hist[k]); main.hist = h; js = JSON.stringify(main); }
-  try { cs.setItem('gokski', js); } catch (e) {}
+  try { cs.setItem('gokski', js, cloudCb); } catch (e) { markPending(); }
   if (srsDirty) {
     srsDirty = false;
     const ch = srsChunks();
-    SRS_KEYS.forEach((k, i) => { const v = ch[i] || ''; if (v !== cloudSrsCache[i]) { cloudSrsCache[i] = v; try { cs.setItem(k, v); } catch (e) {} } });
+    SRS_KEYS.forEach((k, i) => { const v = ch[i] || ''; if (v !== cloudSrsCache[i]) { cloudSrsCache[i] = v; try { cs.setItem(k, v, (err) => { if (err) { cloudSrsCache[i] = null; srsDirty = true; markPending(); } }); } catch (e) { markPending(); } } });
   }
 }
 function cloudLoad(cb) {
   const cs = Telegram.WebApp.CloudStorage;
-  const done = (vals) => {
+  const done = (vals, err) => {
+    if (err) return cb(null, err);
     let main = null;
     try { main = vals.gokski ? JSON.parse(vals.gokski) : null; } catch (e) {}
     SRS_KEYS.forEach((k, i) => cloudSrsCache[i] = vals[k] || '');
     const srs = srsDecode(SRS_KEYS.map(k => vals[k] || ''));
     if (main) main.srs = srs; else if (Object.keys(srs).length) main = { srs };
-    cb(main);
+    cb(main, null);
   };
-  if (typeof cs.getItems === 'function') cs.getItems(['gokski', ...SRS_KEYS], (err, vals) => done(err || !vals ? {} : vals));
-  else cs.getItem('gokski', (err, v) => done(err ? {} : { gokski: v }));
+  if (typeof cs.getItems === 'function') cs.getItems(['gokski', ...SRS_KEYS], (err, vals) => done(vals || {}, err));
+  else cs.getItem('gokski', (err, v) => done({ gokski: v }, err));
 }
 
 // ====================== სერვერი ======================
@@ -253,7 +254,7 @@ function speakP(text, o = {}) {
 async function ttsBuffer(text, o) {
   const key = `${o.voice || 'nova'}|${o.slow ? 1 : 0}|${text}`;
   if (!ttsCache.has(key)) {
-    const p = api('/api/tts', { text, voice: o.voice || 'nova', slow: !!o.slow }, { bin: true }).then(buf => audioCtx().decodeAudioData(buf));
+    const p = ttsFetch(text, o).then(buf => audioCtx().decodeAudioData(buf));
     ttsCache.set(key, p); p.catch(() => ttsCache.delete(key));
   }
   return ttsCache.get(key);
@@ -299,6 +300,117 @@ async function recStart(onBlob, onErr, maxMs = 20000) {
 }
 function recStop() { if (REC.r && REC.r.state === 'recording') REC.r.stop(); }
 const recOn = () => !!(REC.r && REC.r.state === 'recording');
+
+
+// ====================== ოფლაინ რეჟიმი ======================
+// აპი ქეშდება Service Worker-ით, ხმა წინასწარ იტვირთება, პროგრესი ინახება მოწყობილობაზე
+// და კავშირის დაბრუნებისას Telegram-თან და სერვერთან სინქრონიზდება.
+const PENDING_KEY = 'gokski-pending', AUDIO_KEY = 'gokski-audio-units';
+const online = () => navigator.onLine !== false;
+function markPending() { try { localStorage.setItem(PENDING_KEY, '1'); } catch (e) {} }
+function clearPending() { try { localStorage.removeItem(PENDING_KEY); } catch (e) {} }
+const isPending = () => { try { return localStorage.getItem(PENDING_KEY) === '1'; } catch (e) { return false; } };
+function cloudCb(err) { if (err) markPending(); }
+
+function ttsUrl(text, o) { return `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(o.voice || 'nova')}${o.slow ? '&slow=1' : ''}`; }
+async function ttsFetch(text, o) {
+  const r = await fetch(ttsUrl(text, o), { headers: { 'X-Init-Data': IN_TG ? Telegram.WebApp.initData : '' } });
+  if (!r.ok) throw Object.assign(new Error('HTTP ' + r.status), { status: r.status });
+  return r.arrayBuffer();
+}
+
+// Telegram-ის საცავთან დაკავშირება: ჩამოტვირთვა → გაერთიანება → ატვირთვა.
+// თუ ჩამოტვირთვა ვერ მოხერხდა (კავშირი არ არის), ღრუბელს არ ვეხებით და მერე ვცდით ისევ.
+let cloudBooting = false, cloudFirst = true;
+function cloudBoot(after) {
+  if (!IN_TG || cloudBooting) return;
+  cloudBooting = true;
+  let finished = false;
+  const fail = () => { if (finished) return; finished = true; cloudBooting = false; markPending(); if (!booted) { booted = true; if (!FULLSCREEN.includes(view)) render(); } };
+  const to = setTimeout(fail, 7000);
+  try {
+    cloudLoad((remote, err) => {
+      if (finished) return;
+      clearTimeout(to);
+      if (err) return fail();
+      finished = true; cloudBooting = false;
+      if (remote) { try { S = mergeState(S, remote); } catch (e) { console.error(e); } }
+      cloudReady = true; srsDirty = true; SRS_KEYS.forEach((_, i) => { if (cloudSrsCache[i] === undefined) cloudSrsCache[i] = ''; });
+      refreshDay(); clearPending();
+      if (!FULLSCREEN.includes(view)) render();
+      booted = true; syncServer();
+      if (cloudFirst) { cloudFirst = false; bootNotes(); }
+      if (after) after();
+    });
+  } catch (e) { fail(); }
+}
+function netChip() { return online() ? '' : '<span class="chip off" title="ინტერნეტი არ არის — პროგრესი ინახება მოწყობილობაზე">📴</span>'; }
+window.addEventListener('offline', () => {
+  toast('📴 ინტერნეტი არ არის. გაკვეთილები მუშაობს — პროგრესი ინახება და კავშირის დაბრუნებისას სინქრონიზდება.', 4500);
+  if (!FULLSCREEN.includes(view)) render();
+});
+window.addEventListener('online', () => {
+  if (!FULLSCREEN.includes(view)) render();
+  if (!IN_TG) return;
+  const had = isPending() || !cloudReady;
+  cloudBoot(() => { if (had) toast('✅ ინტერნეტი დაბრუნდა — პროგრესი სინქრონიზებულია', 2600); prefetchAhead(); });
+});
+setInterval(() => { if (IN_TG && online() && (isPending() || !cloudReady) && !cloudBooting) cloudBoot(); }, 45000);
+
+// ხმის წინასწარი ჩამოტვირთვა: მიმდინარე და შემდეგი ნაწილი, ფონზე
+function audioUnits() { try { return JSON.parse(localStorage.getItem(AUDIO_KEY) || '[]'); } catch (e) { return []; } }
+function setAudioUnits(a) { try { localStorage.setItem(AUDIO_KEY, JSON.stringify(a.slice(-60))); } catch (e) {} }
+let prefetching = false;
+async function prefetchUnits(units, onStep) {
+  if (!IN_TG || ttsOff || !online() || prefetching || !('serviceWorker' in navigator) || !navigator.serviceWorker.controller) return false;
+  prefetching = true;
+  const have = audioUnits();
+  try {
+    for (const u of units) {
+      if (!UNITS[u] || have.includes(u)) continue;
+      const items = [...UNITS[u].w.map(x => x[0]), ...UNITS[u].s.map(x => x[0])];
+      let all = true;
+      for (let i = 0; i < items.length; i += 3) {
+        if (!online() || ttsOff) return false;
+        await Promise.all(items.slice(i, i + 3).map(t => ttsFetch(t, {}).catch(e => { all = false; if (e && [401, 404, 501].includes(e.status)) ttsOff = true; })));
+      }
+      if (!all) return false;
+      have.push(u); setAudioUnits(have); if (onStep) onStep(u);
+    }
+    return true;
+  } finally { prefetching = false; }
+}
+async function prefetchDialogs(onStep) {
+  if (!IN_TG || ttsOff || !online()) return;
+  for (const d of LISTENS) {
+    const lines = d.l.map(([w, en]) => [en, { voice: LS_VOICES[w] }]);
+    for (let i = 0; i < lines.length; i += 3) await Promise.all(lines.slice(i, i + 3).map(([t, o]) => ttsFetch(t, o).catch(() => {})));
+    if (onStep) onStep(d);
+  }
+}
+function prefetchAhead() {
+  const c = navigator.connection;
+  if (c && (c.saveData || /2g/.test(c.effectiveType || ''))) return;
+  const cu = curUnit();
+  setTimeout(() => prefetchUnits([cu, cu + 1]), 4000);
+}
+async function downloadOffline(btn) {
+  if (!online()) { toast('ჩამოსატვირთად ინტერნეტი გჭირდება.'); return; }
+  if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) { toast('ამ მოწყობილობაზე ოფლაინ შენახვა ვერ ხერხდება.'); return; }
+  const cu = curUnit(), list = [cu, cu + 1, cu + 2, cu + 3, cu + 4].filter(u => UNITS[u]);
+  btn.disabled = true; let n = 0;
+  const step = () => { n++; btn.textContent = `იტვირთება… ${n} / ${list.length + 1}`; };
+  btn.textContent = 'იტვირთება…';
+  while (prefetching) await new Promise(r => setTimeout(r, 300));
+  const ok = await prefetchUnits(list, step);
+  if (ok !== false) { await prefetchDialogs(); step(); }
+  btn.disabled = false;
+  btn.textContent = ok === false ? 'სცადე ისევ' : 'ჩამოტვირთულია ✓';
+  if (ok !== false) toast('📥 შემდეგი 5 ნაწილის და დიალოგების ხმა ჩამოტვირთულია');
+}
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').then(() => prefetchAhead()).catch(() => {}));
+}
 
 // ====================== შეტყობინებები ======================
 function toast(html, ms = 3600) {
@@ -411,7 +523,7 @@ function afterAnswer(ex, ok) {
 }
 function afterSpeak() { L.speakOk = (L.speakOk || 0) + 1; S.st.speakOk++; normState(S); S.wk.spk++; }
 // გაკვეთილში ნანახი სიტყვები ემატება გამეორების სიას
-function rememberLessonWords(q) { q.forEach(e => { if (e.item && e.item.kind === 'w' && !S.srs[srsKey(e.item)]) srsTouch(e.item, true, false); if (e.type === 'match') e.items.forEach(it => { if (!S.srs[srsKey(it)]) srsTouch(it, true, false); }); }); }
+function rememberLessonWords(q) { prefetchAhead(); q.forEach(e => { if (e.item && e.item.kind === 'w' && !S.srs[srsKey(e.item)]) srsTouch(e.item, true, false); if (e.type === 'match') e.items.forEach(it => { if (!S.srs[srsKey(it)]) srsTouch(it, true, false); }); }); }
 function testResult() {
   let passed = 0; while (passed < 4 && L.bandOk[passed] >= 4) passed++;
   const start = [0, 20, 45, 75, 75][passed], code = ['A1', 'A2', 'B1', 'B2', 'B2+'][passed];
@@ -434,6 +546,7 @@ function renderTalkList() {
   const card = t => `<button class="tcard" data-talk="${t.id}"><span class="ti">${t.icon}</span><b>${t.title}</b><small>${t.en}</small>${S.talks[t.id] ? `<span class="tdone">✓ ${S.talks[t.id]}</span>` : ''}</button>`;
   let h = topBar() + `<main class="wrap home"><h1 class="ptitle">საუბარი</h1>
     <div class="card feature">${goki('wave')}<div><h3>ილაპარაკე ინგლისურად</h3><p>აირჩიე სიტუაცია და ესაუბრე AI-ს ხმით ან ტექსტით. შეცდომებს ქართულად გაგისწორებს.</p></div></div>
+    ${online() ? '' : '<div class="card offnote">📴 AI საუბარს ინტერნეტი სჭირდება. ამასობაში გაიარე გაკვეთილები ან გამეორება — ისინი ოფლაინაც მუშაობს.</div>'}
     <div class="tgrid one">${card(TALKS[0])}</div>`;
   for (const lv of ['A1', 'A2', 'B1', 'B2']) {
     h += `<div class="lvl"><span class="lvl-code">${lv}</span><span>${LEVELS.find(l => l[1] === lv)[2]}</span>${lv === my ? '<em class="you">შენი დონე</em>' : ''}<i></i></div>
@@ -444,6 +557,7 @@ function renderTalkList() {
 }
 function openTalk(id) {
   const i = TALKS.findIndex(t => t.id === id); if (i < 0) return;
+  if (!online()) { toast('📴 AI საუბარს ინტერნეტი სჭირდება.'); return; }
   const sc = TALKS[i], my = levelOf(curUnit())[1];
   T = { sc, msgs: [], done: new Set(), turns: 0, corrections: 0, finished: false, busy: false, err: '', hint: '', showHint: false, showGoal: true, rec: false, stt: false, voice: id === 'free' ? 'onyx' : TALK_VOICES[i % 4],
     api: { role: sc.role, setting: sc.setting, level: sc.lvl || my, tasks: sc.tasks.map(t => t[1]) } };
@@ -654,13 +768,15 @@ function renderRank() {
     <div class="card"><h3>პარამეტრები</h3>
       <div class="setrow"><span>❄️ streak-ის გაყინვა</span><b>${S.freeze} / 2</b></div>
       <p class="setnote">ყოველ 7 დღიან streak-ზე 1 გაყინვას იღებ. თუ დღეს გამოტოვებ, გაყინვა streak-ს და RP-ს გადაარჩენს.</p>
+      ${IN_TG ? `<div class="setrow"><span>📥 ოფლაინ ხმა</span><button class="cta sm ghost" data-offdl>ჩამოტვირთვა</button></div>
+      <p class="setnote">გაკვეთილები ინტერნეტის გარეშეც მუშაობს. აქ შემდეგი 5 ნაწილის და დიალოგების ხმას ჩამოტვირთავ. ${isPending() ? '⏳ ზოგი პროგრესი ჯერ არ არის სინქრონიზებული — ინტერნეტის დაბრუნებისას აიტვირთება.' : '✓ პროგრესი სინქრონიზებულია.'}</p>` : ''}
       ${IN_TG ? `<div class="setrow"><span>⏰ საღამოს შეხსენება</span><label class="sw"><input type="checkbox" id="remOn" ${SV.remind !== false ? 'checked' : ''}><i></i></label></div>
       <div class="setrow"><span>შეხსენების დრო</span><select id="remHour">${Array.from({ length: 16 }, (_, i) => i + 8).map(x => `<option value="${x}" ${x === SV.remindHour ? 'selected' : ''}>${x}:00</option>`).join('')}</select></div>
       <p class="setnote">შეხსენებას და კვირის ანგარიშს @${BOT_USER} გამოგიგზავნის.</p>` : '<p class="setnote">შეხსენებები და ცხრილი მუშაობს, როცა Gokski-ს Telegram-იდან ხსნი.</p>'}
     </div>
   </main>` + navBar();
   $('#app').innerHTML = h;
-  if (IN_TG && !SV.board && !SV.loading) loadBoard();
+  if (IN_TG && !SV.board && !SV.loading && online()) loadBoard();
 }
 function loadBoard() {
   SV.loading = true;
@@ -669,6 +785,7 @@ function loadBoard() {
 }
 function boardHTML() {
   if (!IN_TG) return '<p class="setnote">ცხრილი Telegram-შია ხელმისაწვდომი.</p>';
+  if (!SV.board && !online()) return '<p class="setnote">📴 ცხრილი ინტერნეტის დაბრუნებისას გამოჩნდება.</p>';
   if (SV.boardErr) return `<p class="setnote">${SV.boardErr}</p>`;
   if (!SV.board) return '<p class="setnote">იტვირთება…</p>';
   let rows = SV.board.slice();
@@ -719,6 +836,7 @@ function featureClick(t) {
   if (ds.listen) { openListen(ds.listen); return true; }
   if (ds.back !== undefined) { goBack(); return true; }
   if (ds.seg) { SV.seg = ds.seg; document.querySelectorAll('[data-seg]').forEach(b => b.setAttribute('aria-pressed', b === t)); $('#board').innerHTML = boardHTML(); return true; }
+  if (ds.offdl !== undefined) { downloadOffline(t); return true; }
   if (ds.share !== undefined) {
     const url = `https://t.me/share/url?url=${encodeURIComponent('https://t.me/' + BOT_USER)}&text=${encodeURIComponent('ინგლისურს ვსწავლობ Gokski-ში 🇬🇧 შემომიერთდი და შევეჯიბროთ!')}`;
     try { Telegram.WebApp.openTelegramLink(url); } catch (e) {}
