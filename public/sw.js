@@ -1,8 +1,8 @@
 // Gokski — Service Worker: აპი და ხმა ინახება მოწყობილობაზე, რომ ინტერნეტის გარეშეც იმუშაოს.
-const SHELL = 'gokski-shell-v4';
+const SHELL = 'gokski-shell-v5';
 const AUDIO = 'gokski-audio-v1';
 const ASSETS = ['/', '/js/features.js', '/content/talk.js', '/content/listen.js',
-  '/units/a1.js', '/units/a2.js', '/units/b1.js', '/units/b2.js', '/manifest.webmanifest', '/icon.svg'];
+  '/units/a1.js', '/units/a2.js', '/units/b1.js', '/units/b2.js', '/manifest.webmanifest', '/icon.svg', '/fonts/jost-300.woff2', '/fonts/archivo-black.woff2'];
 const MAX_AUDIO = 2500;
 
 self.addEventListener('install', e => {

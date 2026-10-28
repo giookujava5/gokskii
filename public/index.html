@@ -59,9 +59,13 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--coral);outline-
 /* ---------- top brand bar ---------- */
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .top .wrap{display:flex;align-items:center;gap:8px;padding-block:12px}
-.logo{display:flex;align-items:center;gap:8px;margin-right:auto;font-family:var(--f-display);font-weight:800;font-size:24px;letter-spacing:-.03em;color:var(--ink)}
-.logo svg{width:34px;height:34px}
-.logo em{font-style:normal;color:var(--teal)}
+@font-face{font-family:'Jost';font-weight:300;font-style:normal;font-display:swap;src:url('/fonts/jost-300.woff2') format('woff2')}
+@font-face{font-family:'Archivo Black';font-weight:400 900;font-style:normal;font-display:swap;src:url('/fonts/archivo-black.woff2') format('woff2')}
+.logo{display:flex;align-items:center;gap:8px;margin-right:auto;color:var(--ink);line-height:1}
+.logo svg{width:34px;height:34px;flex:none}
+.wm{display:flex;align-items:baseline;font-size:25px;white-space:nowrap}
+.wm .a{font-family:'Jost','Century Gothic','Futura',system-ui,sans-serif;font-weight:300;letter-spacing:-.01em}
+.wm .b{font-family:'Archivo Black','Arial Black','Helvetica Neue',system-ui,sans-serif;font-weight:900;color:var(--teal);letter-spacing:-.02em;font-size:.9em}
 .chip{display:flex;align-items:center;gap:4px;padding:5px 10px 5px 7px;border-radius:99px;background:var(--surface);box-shadow:0 1px 0 var(--line),0 0 0 1px var(--line) inset;font-family:var(--f-display);font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
 .chip svg{width:19px;height:19px}
 .c-fire{color:#F07A22}.c-xp{color:var(--sun-d)}.c-heart{color:var(--bad)}
@@ -734,7 +738,7 @@ function dropMistake(it){ S.mistakes = S.mistakes.filter(k=>k!==mkey(it)); }
 let view = 'path', L = null;
 function topBar(){
   return `<header class="top"><div class="wrap">
-    <div class="logo">${LOGO}<span>Gok<em>ski</em></span></div>
+    <div class="logo" aria-label="Gokski">${LOGO}<span class="wm" aria-hidden="true"><span class="a">gok</span><span class="b">SKI</span></span></div>
     ${netChip()}<span class="chip c-fire" title="დღეები ზედიზედ">${ICON.flame}${S.streak}</span>
     <span class="chip c-xp" title="სულ XP">${ICON.bolt}${S.xp}</span>
     <span class="chip c-heart" title="სიცოცხლეები">${ICON.heart}${S.hearts}</span>
