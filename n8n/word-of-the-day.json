@@ -1,0 +1,227 @@
+{
+  "name": "Gokski — დღის სიტყვა",
+  "nodes": [
+    {
+      "id": "e6b14b4e-9d68-48ed-beda-2289689bfca3",
+      "name": "ყოველ დილით",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "69bf695f-a295-4ba4-82a3-1894fbe02778",
+      "name": "პარამეტრები",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "10026e8f-4efc-4a44-94d6-25a3ce4fcefe",
+              "name": "chat_id",
+              "value": "ჩაწერე_შენი_Telegram_ID",
+              "type": "string"
+            },
+            {
+              "id": "5567cbcb-1de8-4599-971e-28a02511f86d",
+              "name": "level",
+              "value": "A2",
+              "type": "string"
+            },
+            {
+              "id": "39b76b8d-5912-424a-af9e-4bf1d17ce088",
+              "name": "topics",
+              "value": "work, IT, technology, daily life, travel",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "0bc9c273-91ca-49cb-9d95-6f75f3cac50e",
+      "name": "გამეორების თავიდან აცილება",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// ბოლო 200 სიტყვა ინახება, რომ არ განმეორდეს (მუშაობს გააქტიურებულ workflow-ში)\nconst st = $getWorkflowStaticData('global');\nconst used = st.used || [];\nconst cfg = $input.first().json;\nreturn [{ json: { ...cfg, avoid: used.slice(-120).join(', ') } }];"
+      }
+    },
+    {
+      "id": "9b2a16c7-4e46-4553-946d-1cd0f61f7986",
+      "name": "სიტყვის შექმნა",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o-mini', temperature: 0.9, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: \"You create a 'word of the day' for a Georgian speaker learning English. Pick ONE useful English word or short phrase for the given CEFR level and topics, not in the avoid list. Reply ONLY with JSON: {\\\"word\\\": string, \\\"ipa\\\": string, \\\"pos_ka\\\": string (part of speech in Georgian), \\\"meaning_ka\\\": string (Georgian meaning), \\\"example\\\": string (one natural English sentence at that level), \\\"example_ka\\\": string (Georgian translation), \\\"phrase\\\": string (a common collocation with the word), \\\"phrase_ka\\\": string, \\\"tip_ka\\\": string (one short tip in Georgian: usage or a typical mistake Georgian speakers make)}\" }, { role: 'user', content: 'Level: ' + $json.level + '. Topics: ' + $json.topics + '. Avoid: ' + ($json.avoid || 'none') } ] }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "185921df-ae28-4e56-9f14-068408c22fe8",
+      "name": "დამუშავება",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst r = JSON.parse($json.choices[0].message.content);\nconst cfg = $('პარამეტრები').first().json;\nconst st = $getWorkflowStaticData('global');\nst.used = [...(st.used || []), r.word].slice(-200);\nconst caption =\n  `🌅 <b>დღის სიტყვა</b> · ${esc(cfg.level)}\\n\\n` +\n  `🔤 <b>${esc(r.word)}</b> ${esc(r.ipa)}\\n` +\n  `🇬🇪 ${esc(r.meaning_ka)} <i>(${esc(r.pos_ka)})</i>\\n\\n` +\n  `💬 <i>${esc(r.example)}</i>\\n${esc(r.example_ka)}\\n\\n` +\n  `🧩 ${esc(r.phrase)} — ${esc(r.phrase_ka)}\\n` +\n  `💡 ${esc(r.tip_ka)}\\n\\n` +\n  `✍️ დღეს ეს სიტყვა ერთ წინადადებაში გამოიყენე და Mr. Ben-ს მისწერე!`;\nreturn [{ json: { ...r, caption: caption.slice(0, 1024), speech: `${r.word}. ${r.example}`, chat_id: cfg.chat_id } }];"
+      }
+    },
+    {
+      "id": "bd38ab29-c23e-4dfd-8e36-c8a70fab4385",
+      "name": "ხმის შექმნა",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/speech",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'tts-1', voice: 'nova', input: $json.speech, response_format: 'mp3', speed: 0.9 }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "d8ff2304-a0bc-4c87-bbd8-a0927e6f635e",
+      "name": "Telegram-ში გაგზავნა",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "operation": "sendAudio",
+        "chatId": "={{ $('დამუშავება').item.json.chat_id }}",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "additionalFields": {
+          "caption": "={{ $('დამუშავება').item.json.caption }}",
+          "parse_mode": "HTML",
+          "title": "={{ $('დამუშავება').item.json.word }}",
+          "performer": "Gokski"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "ყოველ დილით": {
+      "main": [
+        [
+          {
+            "node": "პარამეტრები",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "პარამეტრები": {
+      "main": [
+        [
+          {
+            "node": "გამეორების თავიდან აცილება",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "გამეორების თავიდან აცილება": {
+      "main": [
+        [
+          {
+            "node": "სიტყვის შექმნა",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "სიტყვის შექმნა": {
+      "main": [
+        [
+          {
+            "node": "დამუშავება",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "დამუშავება": {
+      "main": [
+        [
+          {
+            "node": "ხმის შექმნა",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ხმის შექმნა": {
+      "main": [
+        [
+          {
+            "node": "Telegram-ში გაგზავნა",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi"
+  },
+  "pinData": {}
+}
