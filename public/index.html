@@ -250,6 +250,177 @@ main.home{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
 .said .hit{color:var(--ok)}
 .said .miss{color:var(--bad);text-decoration:underline wavy;text-underline-offset:4px}
 .sheet .row .cta{flex:1}
+
+/* ---------- v3: ზოლი, რანკი, საუბარი, მოსმენა ---------- */
+.sheet .row{display:flex;gap:10px}
+.nav .wrap{gap:2px}
+.nav button{font-size:11px;padding:6px 2px;min-width:0}
+.nav svg{width:24px;height:24px}
+.strip{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.mini{display:flex;align-items:center;gap:10px;padding:12px;border-radius:18px;background:var(--surface);box-shadow:0 0 0 1px var(--line) inset,0 3px 0 var(--line);text-align:left;min-width:0}
+.mini>span:last-child{min-width:0;display:flex;flex-direction:column}
+.mini b{font-size:15px;font-weight:800;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini small{font-size:12px;color:var(--muted);line-height:1.3}
+.mini .mi{font-size:26px;line-height:1}
+.mini svg{flex:none}
+.mini.promo{grid-column:1/-1;background:linear-gradient(135deg,var(--sun-soft),var(--surface));box-shadow:0 0 0 2px var(--sun) inset,0 3px 0 var(--sun-d)}
+.mini.promo small{white-space:normal}
+.toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:60;max-width:min(92vw,440px);padding:12px 16px;border-radius:16px;background:var(--ink);color:var(--bg);font-weight:600;font-size:14px;box-shadow:var(--shadow);animation:tin .3s ease;transition:opacity .4s,transform .4s}
+.toast.out{opacity:0;transform:translate(-50%,-10px)}
+@keyframes tin{from{opacity:0;transform:translate(-50%,-12px)}}
+.frz{margin-top:10px!important;font-weight:700;color:var(--teal)!important}
+/* result rank block */
+.rkres{display:flex;gap:12px;align-items:center;width:100%;max-width:380px;margin-top:14px;padding:12px 14px;border-radius:18px;background:var(--surface);box-shadow:0 0 0 2px color-mix(in srgb,var(--tc) 55%,transparent) inset;text-align:left}
+.rkres svg{flex:none}
+.rkres>div{flex:1;min-width:0}
+.rkres b{font-weight:800}
+.rkres p{margin:6px 0 0;font-size:14px;color:var(--ink);max-width:none}
+.rkd{font-family:var(--f-display);font-weight:800;margin-left:6px}
+.rkd.p{color:var(--ok)}.rkd.n{color:var(--bad)}
+.rkbar{height:10px;border-radius:9px;background:var(--line);overflow:hidden;margin-top:6px}
+.rkbar span{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,var(--tc),var(--tc2));transition:width .6s}
+.rkbar.big{height:14px;margin-top:12px}
+.achnew{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}
+.achnew span{padding:6px 12px;border-radius:99px;background:var(--sun-soft);color:var(--ink);font-weight:700;font-size:14px;box-shadow:0 0 0 1.5px var(--sun) inset}
+.recap{width:100%;max-width:440px;margin-top:16px;text-align:left}
+.recap h3{margin:0 0 8px;font-size:17px}
+.rc{position:relative;display:flex;flex-direction:column;gap:2px;padding:10px 52px 10px 12px;border-radius:14px;background:var(--surface);box-shadow:0 0 0 1px var(--line) inset;margin-bottom:8px}
+.rc s{color:var(--bad);font-size:14px}
+.rc b{font-family:var(--f-display);color:var(--ok);font-size:16px}
+.rc span{font-size:13px;color:var(--muted)}
+.rc .spk{position:absolute;right:10px;top:50%;transform:translateY(-50%)}
+/* rank tab */
+.rkcard{margin-top:14px;padding:22px 18px;border-radius:26px;text-align:center;color:#fff;background:radial-gradient(120% 90% at 50% 0%,color-mix(in srgb,var(--tc2) 55%,transparent),transparent 60%),linear-gradient(160deg,var(--tc),color-mix(in srgb,var(--tc) 55%,#0B1B3F));box-shadow:var(--shadow)}
+.rkem{display:grid;place-items:center;filter:drop-shadow(0 8px 14px rgba(0,0,0,.25))}
+.rkcard h2{margin:8px 0 0;font-family:var(--f-display);font-size:28px;font-weight:800}
+.rkpts{margin:2px 0 0;opacity:.9;font-weight:700;font-family:var(--f-display)}
+.rkcard .rkbar{background:rgba(255,255,255,.25)}
+.rkcard .rkbar span{background:#fff}
+.rknext,.rksh{margin:8px 0 0;font-size:14px;opacity:.9}
+.series{display:flex;gap:10px;justify-content:center;margin-top:14px}
+.series i{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.25);box-shadow:0 0 0 2px rgba(255,255,255,.6) inset}
+.series i.w{background:#4ADE80}.series i.l{background:#F87171}
+.cta.gold{background:var(--sun);color:var(--on-sun);box-shadow:0 5px 0 var(--sun-d)}
+.rules summary{cursor:pointer;font-weight:800;font-size:17px;list-style:none}
+.rules summary::after{content:" ▾";color:var(--muted)}
+.rules[open] summary::after{content:" ▴"}
+.rules ul{margin:12px 0 0;padding-left:18px;display:grid;gap:8px;color:var(--ink);font-size:14px}
+.tiers{display:flex;flex-wrap:wrap;gap:6px;justify-content:space-between;margin-top:12px}
+.tiers span{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--muted);font-weight:700}
+.cardh{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:10px}
+.cardh h3{margin:0}
+.cnt{font-family:var(--f-display);color:var(--muted)}
+.cnt.up{color:var(--ok)}.cnt.dn{color:var(--bad)}
+.seg{display:flex;padding:3px;border-radius:12px;background:var(--surface-2);box-shadow:0 0 0 1px var(--line) inset}
+.seg button{padding:6px 10px;border-radius:9px;font-size:13px;font-weight:700;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--teal);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.brow{display:flex;align-items:center;gap:10px;padding:8px 6px;border-top:1px solid var(--line)}
+.brow:first-child{border-top:0}
+.brow.me{background:var(--teal-soft);border-radius:12px;border-top-color:transparent}
+.brow .pos{width:22px;text-align:center;font-family:var(--f-display);font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+.brow .nm{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brow .vl{font-size:13px;color:var(--muted);font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.wchart{width:100%;height:auto;margin-top:4px}
+.wchart .bv{font:700 11px var(--f-display);fill:var(--ink)}
+.wchart .bl{font:600 11px var(--f-body);fill:var(--muted)}
+.wstats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px;text-align:center}
+.wstats b{display:block;font-family:var(--f-display);font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+.wstats small{font-size:11px;color:var(--muted)}
+.achs{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.ach{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px;border-radius:14px;background:var(--surface-2);text-align:center;opacity:.45;filter:grayscale(1)}
+.ach.on{opacity:1;filter:none;background:var(--sun-soft);box-shadow:0 0 0 1.5px var(--sun) inset}
+.ach span{font-size:26px;line-height:1.1}
+.ach b{font-size:12px;line-height:1.25}
+.ach small{font-size:10.5px;color:var(--muted);line-height:1.3}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-weight:600}
+.card h3+.setrow{border-top:0}
+.setrow select{font:inherit;padding:6px 10px;border-radius:10px;border:0;box-shadow:0 0 0 1px var(--line) inset;background:var(--surface);color:var(--ink)}
+.setnote{margin:4px 0 0!important;font-size:13px;color:var(--muted)}
+.sw{position:relative;width:48px;height:28px;flex:none}
+.sw input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.sw i{position:absolute;inset:0;border-radius:99px;background:var(--lock);transition:.2s;pointer-events:none}
+.sw i::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:.2s}
+.sw input:checked+i{background:var(--ok)}
+.sw input:checked+i::after{transform:translateX(20px)}
+.sw input:focus-visible+i{outline:3px solid var(--coral);outline-offset:2px}
+.card.row2{display:flex;align-items:center;gap:14px}
+.card.row2>div{flex:1;min-width:0}
+.cta.sm{width:auto;flex:none;margin-top:0;padding:11px 16px;font-size:14px}
+/* talk list */
+.lvl .you{font-style:normal;font-size:12px;font-weight:700;color:var(--teal);background:var(--teal-soft);padding:2px 8px;border-radius:99px}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.tgrid.one{grid-template-columns:1fr}
+.tcard{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:14px;border-radius:18px;background:var(--surface);box-shadow:0 0 0 1px var(--line) inset,0 3px 0 var(--line);text-align:left;min-width:0}
+.tcard:active{transform:translateY(2px)}
+.tcard .ti{font-size:28px;line-height:1.1;margin-bottom:4px}
+.tcard b{font-size:15px;line-height:1.3}
+.tcard small{font-family:var(--f-display);font-size:12.5px;color:var(--muted);line-height:1.3}
+.tcard .tdone{position:absolute;top:10px;right:10px;font-size:12px;font-weight:800;color:var(--ok);background:var(--ok-bg);padding:2px 8px;border-radius:99px}
+.tcard .lvb{font-family:var(--f-display);font-size:12px;font-weight:800;color:#fff;background:var(--teal);padding:2px 8px;border-radius:8px;margin-bottom:6px}
+/* chat */
+.player.chat{height:100%;min-height:0}
+.ct-title{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.ct-title b{font-size:17px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ct-title small{font-family:var(--f-display);color:var(--muted);font-size:13px}
+.ct-goal{flex:none;padding:7px 11px;border-radius:12px;background:var(--teal-soft);color:var(--teal);font-weight:800;font-size:14px;font-family:var(--f-display)}
+.ct-goalbox{padding-block:4px 8px}
+.ct-goalbox p{margin:0;padding:10px 12px;border-radius:14px;background:var(--sun-soft);font-size:14px;font-weight:600}
+.ct-goalbox ul{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;font-size:14px}
+.ct-goalbox li.ok{color:var(--ok);font-weight:700}
+.ct-log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-block:8px 16px}
+.msg{display:flex;flex-direction:column;max-width:86%}
+.msg.ai{align-self:flex-start}
+.msg.me{align-self:flex-end;align-items:flex-end}
+.bub{padding:11px 14px;border-radius:18px;font-size:16px;line-height:1.45}
+.msg.ai .bub{background:var(--surface);box-shadow:0 0 0 1px var(--line) inset;border-bottom-left-radius:6px}
+.msg.ai .bub p{margin:0;font-family:var(--f-display);font-weight:500;font-size:17px}
+.msg.ai .bub p.ka{font-family:var(--f-body);font-size:14px;color:var(--muted);margin-top:6px}
+.msg.me .bub{background:var(--teal);color:#fff;border-bottom-right-radius:6px;font-family:var(--f-display);font-weight:500}
+.tools{display:flex;gap:6px;margin-top:8px}
+.tools button{display:flex;align-items:center;gap:4px;padding:4px 9px;border-radius:9px;background:var(--teal-soft);color:var(--teal);font-size:12.5px;font-weight:700}
+.tools svg{width:16px;height:16px}
+.corr{margin-top:6px;padding:8px 11px;border-radius:12px;background:var(--sun-soft);box-shadow:0 0 0 1.5px var(--sun) inset;font-size:14px;max-width:100%}
+.corr b{color:var(--ink)}
+.corr span{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.typing{display:flex;gap:5px;padding:14px 16px}
+.typing i{width:8px;height:8px;border-radius:50%;background:var(--muted);animation:dot 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes dot{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+.ct-err{padding:10px 12px;border-radius:14px;background:var(--bad-bg);color:var(--bad);font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.ct-err button{padding:6px 12px;border-radius:10px;background:var(--bad);color:#fff;font-weight:700}
+.ct-bar{position:sticky;bottom:0;background:var(--bg);border-top:1px solid var(--line)}
+.ct-bar .wrap{padding-block:10px calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px}
+.ct-row{display:flex;gap:8px;align-items:center}
+.ct-row .typein{flex:1;min-width:0;padding:12px 14px;font-size:17px}
+.ct-send{flex:none;width:46px;height:46px;border-radius:14px;background:var(--teal-soft);color:var(--teal);font-size:20px;font-weight:800}
+.ct-mic{flex:none;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:var(--teal);color:#fff;box-shadow:0 5px 0 var(--teal-d)}
+.ct-mic svg{width:28px;height:28px}
+.ct-mic.rec{background:var(--bad);box-shadow:0 5px 0 var(--bad-d);animation:recpulse 1.2s ease-in-out infinite}
+.ct-mic[disabled],.ct-send[disabled]{opacity:.5}
+.ct-hint{align-self:flex-start;padding:6px 12px;border-radius:12px;background:var(--sun-soft);font-size:13.5px;font-weight:600;text-align:left}
+.ct-state{margin:0;text-align:center;font-size:13px;color:var(--muted)}
+.linkbtn{color:var(--teal);font-weight:800;text-decoration:underline;text-underline-offset:3px}
+/* listening */
+.ls{gap:16px}
+.cast{display:flex;justify-content:center;gap:28px}
+.pp{display:flex;flex-direction:column;align-items:center;gap:4px;transition:transform .2s}
+.pp span{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;color:#fff;font:800 24px var(--f-display);box-shadow:0 4px 0 rgba(0,0,0,.15)}
+.pp b{font-size:13px}
+.pp.talking{transform:scale(1.12)}
+.pp.talking span{box-shadow:0 0 0 5px color-mix(in srgb,var(--teal) 35%,transparent)}
+.lines{display:grid;gap:6px;padding:12px 14px;border-radius:18px;background:var(--surface);box-shadow:0 0 0 1px var(--line) inset}
+.lines p{margin:0;font-family:var(--f-display);font-size:16px;padding:4px 6px;border-radius:8px;transition:background .2s}
+.lines p.cur{background:var(--teal-soft)}
+.lines p span{display:block;font-family:var(--f-body);font-size:13px;color:var(--muted)}
+.lines.hide p{filter:blur(6px);user-select:none}
+.lines.hide p.cur{filter:blur(4px)}
+.lsctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lsctl .cta{width:auto;flex:1;margin-top:0}
+.chipbtn{padding:10px 12px;border-radius:12px;background:var(--surface);box-shadow:0 0 0 1px var(--line) inset;font-weight:700;font-size:14px}
+.chipbtn.on{background:var(--teal-soft);color:var(--teal);box-shadow:0 0 0 1.5px var(--teal) inset}
+.qs{display:grid;gap:16px}
+.q h4{margin:0 0 8px;font-size:16px}
+.q .opt{font-size:15px;padding:12px 14px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -274,6 +445,9 @@ function U(t, en, tip, w, s){
 <script src="units/a2.js"></script>
 <script src="units/b1.js"></script>
 <script src="units/b2.js"></script>
+<script src="content/talk.js"></script>
+<script src="content/listen.js"></script>
+<script src="js/features.js"></script>
 <script>
 // ====================== CONTENT ======================
 const UNITS = [
@@ -368,6 +542,7 @@ const day = (d=new Date()) => `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate(
 const yesterday = () => { const d=new Date(); d.setDate(d.getDate()-1); return day(d); };
 let S = {xp:0, streak:0, lastDay:'', todayXp:0, todayDate:'', hearts:5, heartsDay:'', prog:{}, mistakes:[]};
 try { const raw = localStorage.getItem(KEY) || localStorage.getItem(OLD); if (raw) S = Object.assign(S, JSON.parse(raw)); } catch(e) {}
+S = normState(S);
 var cloudReady = false, booted = false;
 function save(){ S.updated = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) {} if (cloudReady) cloudSave(); }
 // ორი მოწყობილობის პროგრესის გაერთიანება: ყოველთვის იგება უკეთესი შედეგი, არაფერი იკარგება
@@ -381,13 +556,15 @@ function mergeState(a, b){
   if (dnum(b.heartsDay) > dnum(a.heartsDay)) { o.heartsDay = b.heartsDay; o.hearts = b.hearts; } else if (dnum(b.heartsDay) === dnum(a.heartsDay)) o.hearts = Math.min(a.hearts ?? 5, b.hearts ?? 5);
   o.mistakes = [...new Set([...(a.mistakes||[]), ...(b.mistakes||[])])].slice(-40);
   o.updated = Math.max(a.updated||0, b.updated||0);
-  return o;
+  return mergeExtra(o, a, b);
 }
 function refreshDay(){
   const t = day();
   if (S.heartsDay !== t) { S.hearts = 5; S.heartsDay = t; }
   if (S.todayDate !== t) { S.todayXp = 0; S.todayDate = t; }
-  if (S.lastDay && S.lastDay !== t && S.lastDay !== yesterday()) S.streak = 0;
+  normState(S);
+  // Telegram-ში streak-ს და რანკს ვცვლით მხოლოდ ღრუბლიდან მონაცემების მიღების შემდეგ
+  if (!IN_TG || cloudReady) dayRoll();
   save();
 }
 refreshDay();
@@ -400,21 +577,21 @@ const allDone = () => UNITS.every((_,u)=>prog(u)>=LESSONS);
 var tg = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) ? window.Telegram.WebApp : null;
 const CLOUD_KEY = 'gokski';
 function haptic(kind){ try { if (!tg) return; if (kind==='select') tg.HapticFeedback.selectionChanged(); else tg.HapticFeedback.notificationOccurred(kind); } catch(e) {} }
-function cloudSave(){ try { if (typeof tg!=='undefined' && tg && tg.CloudStorage) tg.CloudStorage.setItem(CLOUD_KEY, JSON.stringify(S)); } catch(e) {} }
+function cloudSave(){ cloudPut(); }
 if (tg){
   try { tg.ready(); tg.expand(); if (tg.disableVerticalSwipes) tg.disableVerticalSwipes(); } catch(e) {}
   try { document.documentElement.dataset.theme = tg.colorScheme === 'dark' ? 'dark' : 'light'; } catch(e) {}
   try { const dark = tg.colorScheme === 'dark'; tg.setHeaderColor(dark ? '#0A1226' : '#EEF3FF'); tg.setBackgroundColor(dark ? '#0A1226' : '#EEF3FF'); } catch(e) {}
   try { tg.onEvent('themeChanged', ()=>{ document.documentElement.dataset.theme = tg.colorScheme === 'dark' ? 'dark' : 'light'; }); } catch(e) {}
-  try { tg.BackButton.onClick(()=>{ if (document.querySelector('.modal')) { document.querySelector('.modal').remove(); return; } L=null; view='path'; render(); }); } catch(e) {}
-  try { tg.CloudStorage.getItem(CLOUD_KEY, (err, val)=>{
-    if (!err && val) { try { S = mergeState(S, JSON.parse(val)); } catch(e) {} }
-    cloudReady = true; refreshDay();
-    if (view !== 'lesson') render();
-    booted = true;
+  try { tg.BackButton.onClick(()=>{ if (document.querySelector('.modal')) { document.querySelector('.modal').remove(); return; } goBack(); }); } catch(e) {}
+  try { cloudLoad(remote => {
+    if (remote) { try { S = mergeState(S, remote); } catch(e) { console.error(e); } }
+    cloudReady = true; srsDirty = true; refreshDay();
+    if (!FULLSCREEN.includes(view)) render();
+    booted = true; syncServer(); bootNotes();
   }); } catch(e) { cloudReady = true; }
 }
-function syncBack(){ try { if (!tg) return; if (view==='lesson') tg.BackButton.show(); else tg.BackButton.hide(); } catch(e) {} }
+function syncBack(){ try { if (!tg) return; if (FULLSCREEN.includes(view)) tg.BackButton.show(); else tg.BackButton.hide(); } catch(e) {} }
 
 // ====================== HELPERS ======================
 const $ = s => document.querySelector(s);
@@ -469,14 +646,10 @@ function goki(mood='happy', cls='m'){
 }
 
 // speech
-const canSpeak = 'speechSynthesis' in window;
+var canSpeak = ('speechSynthesis' in window) || IN_TG;
 let voice = null;
 function pickVoice(){ if(!canSpeak) return; const v = speechSynthesis.getVoices(); voice = v.find(x=>/en-US/i.test(x.lang)&&/natural|google|samantha|aria|jenny/i.test(x.name)) || v.find(x=>/en-US/i.test(x.lang)) || v.find(x=>/^en/i.test(x.lang)) || null; }
 if (canSpeak) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
-function say(text, slow){
-  if (!canSpeak) return;
-  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang='en-US'; if (voice) u.voice=voice; u.rate = slow ? .6 : .92; speechSynthesis.speak(u); } catch(e) {}
-}
 let actx;
 function tone(seq, type='sine'){ try { actx = actx || new (window.AudioContext||window.webkitAudioContext)(); let t=actx.currentTime; for (const [f,d] of seq){ const o=actx.createOscillator(), g=actx.createGain(); o.type=type; o.frequency.value=f; g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.16,t+.02); g.gain.exponentialRampToValueAtTime(.0001,t+d); o.connect(g).connect(actx.destination); o.start(t); o.stop(t+d); t+=d*.75; } } catch(e) {} }
 const sfx = { ok:()=>tone([[660,.12],[990,.22]]), bad:()=>tone([[240,.16],[180,.26]],'triangle'), pop:()=>tone([[880,.08]]), done:()=>tone([[523,.12],[659,.12],[784,.12],[1046,.35]]) };
@@ -569,8 +742,8 @@ function topBar(){
   </div></header>`;
 }
 function navBar(){
-  const b = (id, icon, label) => `<button data-go="${id}" ${view===id?'aria-current="page"':''}>${ICON[icon]}${label}</button>`;
-  return `<nav class="nav"><div class="wrap">${b('path','map','სწავლა')}${b('practice','dumbbell','ვარჯიში')}${b('words','book','ლექსიკონი')}</div></nav>`;
+  const b = (id, icon, label) => `<button data-go="${id}" ${view===id?'aria-current="page"':''}>${ICON[icon]||ICON2[icon]}${label}</button>`;
+  return `<nav class="nav"><div class="wrap">${b('path','map','სწავლა')}${b('practice','dumbbell','ვარჯიში')}${b('talk','chat','საუბარი')}${b('rank','trophy','რანკი')}${b('words','book','ლექსიკონი')}</div></nav>`;
 }
 function hero(){
   const cu = curUnit(), li = Math.min(prog(cu), LESSONS-1), done = allDone();
@@ -586,7 +759,7 @@ function hero(){
         <b><div>${S.todayXp}<span>/${GOAL} XP</span></div></b></div>
     </div>
     <button class="go" ${done?'data-practice':`data-lesson="${cu}:${li}"`}>${ICON.play}${done ? 'ვარჯიში' : S.xp ? 'გაგრძელება' : 'პირველი გაკვეთილი'}</button>
-  </section>`;
+  </section>${homeStrip()}`;
 }
 const OFFS = [0, -78, 0, 78], STEP = 112;
 function renderPath(){
@@ -637,18 +810,8 @@ function renderWords(){
   h += `<p class="endnote">აქ ჩანს მხოლოდ ის ნაწილები, რომლებიც უკვე გახსენი.</p></main>` + navBar();
   $('#app').innerHTML = h;
 }
-function renderPractice(){
-  const n = S.mistakes.length, any = Object.values(S.prog).some(v=>v>0);
-  let h = topBar() + `<main class="wrap home"><h1 class="ptitle">ვარჯიში</h1>
-    <div class="card feature">${goki(n?'wow':'happy')}<div><div class="big-n">${n}</div><h3>შეცდომა შენახულია</h3>
-      <p>${n ? 'გაიმეორე და აღარ შეგეშლება.' : any ? 'შეცდომები არ გაქვს! ვარჯიში ნასწავლის შემთხვევითი გამეორება იქნება.' : 'ჯერ გაიარე პირველი გაკვეთილი.'}</p></div></div>
-    <button class="cta" data-practice ${any?'':'disabled'}>ვარჯიშის დაწყება</button>
-    <div class="card"><h3>როგორ მუშაობს</h3><p>ვარჯიშისას სიცოცხლე არ გეკარგება, დასრულებისას კი +1 სიცოცხლე გიბრუნდება. რასაც სწორად უპასუხებ, შეცდომების სიიდან ქრება.</p></div>
-    <div class="card"><h3>რჩევა</h3><p>დღეში 1–2 გაკვეთილი ყოველდღე ბევრად ჯობია კვირაში ერთხელ ათს. სიტყვა, რომელსაც ისმენ, ხმამაღლა გაიმეორე.</p></div>
-  </main>` + navBar();
-  $('#app').innerHTML = h;
-}
-function render(){ if (view==='path') renderPath(); else if (view==='words') renderWords(); else renderPractice(); syncBack(); }
+function renderPractice(){ renderPracticeTab(); }
+function render(){ if (view==='path') renderPath(); else if (view==='words') renderWords(); else if (view==='talk') renderTalkList(); else if (view==='rank') renderRank(); else renderPractice(); syncBack(); }
 
 function showTip(u){
   const U = UNITS[u];
@@ -663,20 +826,23 @@ function showTip(u){
 }
 
 // ====================== LESSON PLAYER ======================
-function startLesson(u, li, practice){
-  if (!practice && S.hearts <= 0) return outOfHearts(true);
-  const q = practice ? buildPractice() : buildLesson(u, li);
+function startLesson(u, li, mode){
+  mode = mode === true ? 'practice' : (mode || 'lesson');
+  if (mode === 'lesson' && S.hearts <= 0) return outOfHearts(true);
+  const q = mode === 'practice' ? buildPractice() : mode === 'review' ? buildReview() : mode === 'test' ? buildTest() : mode === 'promo' ? buildPromo() : buildLesson(u, li);
   if (!q.length) return;
-  L = {u, li, practice, q, pos:0, total:q.length, right:0, wrongs:0, combo:0, answer:null, state:'ask', retry:prog(u)>li};
+  stopSpeech();
+  L = {u, li, mode, practice: mode !== 'lesson', q, pos:0, total:q.length, right:0, wrongs:0, combo:0, answer:null, state:'ask',
+       retry: mode === 'lesson' && prog(u) > li, speakOk:0, bandOk:[0,0,0,0], bandAll:[0,0,0,0]};
   view = 'lesson'; syncBack();
   renderEx();
-  if (!practice && li===0 && prog(u)===0) showTip(u);
+  if (mode === 'lesson' && li===0 && prog(u)===0) showTip(u);
 }
 function headerHTML(){
   const p = Math.round(L.right / L.total * 100);
   return `<div class="wrap p-top"><button class="x" data-quit aria-label="გასვლა">${ICON.x}</button>
     <div class="pbar" role="progressbar" aria-valuenow="${p}" aria-valuemin="0" aria-valuemax="100"><span style="width:${Math.max(p,4)}%"></span></div>
-    ${L.practice ? '' : `<span class="chip c-heart">${ICON.heart}${S.hearts}</span>`}</div>`;
+    ${L.mode !== 'lesson' ? (L.mode === 'promo' ? '<span class="chip c-xp">🏆 მატჩი</span>' : L.mode === 'test' ? '<span class="chip">📝 ტესტი</span>' : L.mode === 'review' ? '<span class="chip">🧠</span>' : '') : `<span class="chip c-heart">${ICON.heart}${S.hearts}</span>`}</div>`;
 }
 const kbd = k => `<span class="kbd">${k+1}</span>`;
 function renderEx(){
@@ -737,6 +903,7 @@ function check(){
     ok = a===c; if (!ok && c.length>=4 && lev(a,c)===1){ ok = true; note = `პატარა შეცდომაა. სწორად იწერება: ${ex.item.en}`; }
   } else ok = norm(L.answer.map(k=>ex.tiles[k]).join(' ')) === norm(ex.item.en);
   L.state = 'fb';
+  afterAnswer(ex, ok);
   const sheet = $('#sheet');
   if (ok){
     L.right++; L.combo++; sfx.ok(); haptic('success'); if (L.practice) dropMistake(ex.item);
@@ -744,13 +911,13 @@ function check(){
     sheet.innerHTML = `<div class="wrap"><div class="fb">${goki(L.combo>=3?'wow':'happy')}<div><h4>${pick(['შესანიშნავია!','ყოჩაღ!','ზუსტად ასეა!','ძალიან კარგი!','სწორია!'])}</h4>${note?`<p>${esc(note)}</p>`:''}${ex.type.startsWith('build')||ex.type==='pick_sent'?`<p class="sub">${esc(ex.item.en)} — ${esc(ex.item.ka)}</p>`:''}</div></div><button class="cta" id="next">გაგრძელება</button></div>`;
     showCombo();
   } else {
-    L.wrongs++; L.combo = 0; sfx.bad(); haptic('error'); addMistake(ex.item);
-    if (!L.practice) S.hearts = Math.max(0, S.hearts-1);
+    L.wrongs++; L.combo = 0; sfx.bad(); haptic('error'); if (L.mode !== 'test') addMistake(ex.item);
+    if (L.mode === 'lesson') S.hearts = Math.max(0, S.hearts-1);
     save();
-    L.q.push(makeEx(ex.type, ex.item));
+    if (['lesson','practice','review'].includes(L.mode)) L.q.push(makeEx(ex.type, ex.item));
     sheet.className = 'sheet bad';
     sheet.innerHTML = `<div class="wrap"><div class="fb">${goki('sad')}<div><h4>სწორი პასუხი:</h4><p>${esc(correctText(ex))}</p><p class="sub">${esc(ex.item.en)} — ${esc(ex.item.ka)}</p></div><button class="spk" data-say="${esc(ex.item.en)}" aria-label="მოუსმინე">${ICON.spk}</button></div><button class="cta" id="next">გასაგებია</button></div>`;
-    if (!L.practice && S.hearts<=0) L.out = true;
+    if (L.mode === 'lesson' && S.hearts<=0) L.out = true;
   }
   if (canSpeak && ok && ex.type!=='pick_ka') say(ex.item.en);
   document.querySelector('.p-top').outerHTML = headerHTML();
@@ -759,28 +926,39 @@ function check(){
 }
 function next(){
   if (L.out){ L.out=false; return outOfHearts(false); }
+  if (L.mode === 'test' && testStop()) return finish();
   L.pos++;
   if (L.pos >= L.q.length) return finish();
   renderEx();
 }
 function finish(){
-  const acc = Math.round(L.right / (L.right + L.wrongs) * 100) || 100;
-  const gain = L.practice ? 5 : (L.retry ? 5 : 10) + (L.wrongs===0 ? 5 : 0);
-  if (L.practice) S.hearts = Math.min(5, S.hearts+1);
-  else if (prog(L.u) === L.li) S.prog[L.u] = L.li+1;
-  const t = day();
-  if (S.lastDay !== t){ S.streak = S.lastDay===yesterday() ? S.streak+1 : 1; S.lastDay = t; }
-  S.xp += gain; S.todayXp += gain; save(); sfx.done(); confetti(); haptic('success');
-  const unitDone = !L.practice && !L.retry && L.li===LESSONS-1;
-  $('#app').innerHTML = `<div class="player"><main class="wrap result">
-    ${goki(acc===100?'wow':'wave')}
-    <h2>${unitDone ? 'ნაწილი დასრულდა!' : L.practice ? 'ვარჯიში დასრულდა!' : 'გაკვეთილი დასრულდა!'}</h2>
-    <p>${acc===100 ? 'უშეცდომოდ! შესანიშნავი შედეგია.' : acc>=80 ? 'ძალიან კარგია, ასე განაგრძე.' : 'შეცდომები შენახულია, ვარჯიშში გაიმეორებ.'}</p>
+  stopSpeech();
+  const mode = L.mode;
+  if (mode === 'test') return testResult();
+  const acc = Math.round(L.right / Math.max(1, L.right + L.wrongs) * 100) || 0;
+  let gain, kind;
+  if (mode === 'promo') gain = 10;
+  else if (mode === 'review') { gain = 8; kind = 'review'; }
+  else if (mode === 'practice') { gain = 5; kind = 'practice'; S.hearts = Math.min(5, S.hearts+1); }
+  else { gain = (L.retry ? 5 : 10) + (L.wrongs===0 ? 5 : 0); kind = L.retry ? 'retry' : 'lesson'; if (prog(L.u) === L.li) S.prog[L.u] = L.li+1; rememberLessonWords(L.q); }
+  const cr = credit(gain);
+  if (mode === 'lesson'){ S.st.lessons++; S.wk.les++; if (L.wrongs === 0) S.st.perfect++; }
+  const rk = mode === 'promo' ? promoOutcome(acc >= 80) : rankActivity(kind, acc, {speakOk: L.speakOk});
+  const fresh = checkAch();
+  save(); syncServer(); sfx.done(); if (mode !== 'promo' || acc >= 80) confetti(); haptic('success');
+  const unitDone = mode === 'lesson' && !L.retry && L.li===LESSONS-1;
+  const title = mode === 'promo' ? (acc >= 80 ? 'მატჩი მოგებულია!' : 'მატჩი წაგებულია') : unitDone ? 'ნაწილი დასრულდა!' : mode === 'review' ? 'გამეორება დასრულდა!' : mode === 'practice' ? 'ვარჯიში დასრულდა!' : 'გაკვეთილი დასრულდა!';
+  const note = mode === 'promo' ? (acc >= 80 ? `შედეგი ${acc}% — 80%+ საჭირო იყო.` : `შედეგი ${acc}%. მოსაგებად 80% გჭირდება.`) : acc===100 ? 'უშეცდომოდ! შესანიშნავი შედეგია.' : acc>=80 ? 'ძალიან კარგია, ასე განაგრძე.' : 'შეცდომები შენახულია, ვარჯიშში გაიმეორებ.';
+  $('#app').innerHTML = `<div class="player"><main class="wrap result ${mode === 'promo' && acc < 80 ? 'fail' : ''}">
+    ${goki(mode === 'promo' && acc < 80 ? 'sad' : acc===100?'wow':'wave')}
+    <h2>${title}</h2>
+    <p>${note}</p>
     <div class="kpis">
       <div class="kpi" style="--kc:var(--sun-d)"><small>XP</small><b>+${gain}</b></div>
       <div class="kpi" style="--kc:var(--ok)"><small>სიზუსტე</small><b>${acc}%</b></div>
       <div class="kpi" style="--kc:#E8711A"><small>STREAK</small><b>${S.streak}</b></div>
-    </div></main>
+    </div>
+    ${rankBlock(rk)}${achBlock(fresh)}${cr.freezeEarned ? '<p class="frz">❄️ streak-ის გაყინვა მოიპოვე! ერთ გამოტოვებულ დღეს გადაგარჩენს.</p>' : ''}</main>
     <div class="sheet"><div class="wrap"><button class="cta" id="home">გაგრძელება</button></div></div></div>`;
   $('#home').focus();
   L = null;
@@ -862,7 +1040,7 @@ function speechResult(text){
   L.state = 'fb';
   const sheet = $('#sheet'), heard = text.trim() ? `გავიგე: „${esc(text.trim())}" · ${pct}%` : 'ვერაფერი გავიგე';
   if (ok){
-    L.right++; L.combo++; sfx.ok(); haptic('success');
+    L.right++; L.combo++; sfx.ok(); haptic('success'); afterSpeak();
     sheet.className = 'sheet ok';
     sheet.innerHTML = `<div class="wrap"><div class="fb">${goki(pct===100?'wow':'happy')}<div><h4>${pick(['შესანიშნავი გამოთქმა!','ძალიან კარგად თქვი!','ყოჩაღ, გასაგებად ილაპარაკე!'])}</h4><p class="said">${html}</p><p class="sub">${heard}</p></div></div><button class="cta" id="next">გაგრძელება</button></div>`;
     showCombo();
@@ -889,13 +1067,14 @@ function noSpeak(){
 // ====================== EVENTS ======================
 document.addEventListener('click', e=>{
   const t = e.target.closest('button'); if (!t) return;
+  if (featureClick(t)) return;
   if (t.dataset.say !== undefined){ say(t.dataset.say, t.hasAttribute('data-slow')); return; }
   if (t.dataset.go){ view = t.dataset.go; render(); window.scrollTo(0,0); return; }
   if (t.dataset.tip !== undefined){ showTip(+t.dataset.tip); return; }
   if (t.dataset.lesson){ if (t.getAttribute('aria-disabled')) return; const [u,li]=t.dataset.lesson.split(':').map(Number); startLesson(u,li,false); return; }
   if (t.hasAttribute('data-practice')){ startLesson(0,0,true); return; }
   if (t.id==='home'){ view='path'; refreshDay(); render(); window.scrollTo(0,0); return; }
-  if (t.hasAttribute('data-quit')){ L=null; view='path'; render(); return; }
+  if (t.hasAttribute('data-quit')){ goBack(); return; }
   if (L && t.id==='retry'){ renderEx(); return; }
   if (!L || L.state!=='ask'){ if (t.id==='next') next(); return; }
   if (t.id==='mic'){ toggleRec(); return; }

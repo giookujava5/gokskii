@@ -1,33 +1,28 @@
 # Gokski — ინგლისური ქართულად (A1 → B2)
 
-100 ნაწილი, 300 გაკვეთილი, სალაპარაკო სავარჯიშო. Telegram Mini App და ვებ-აპი.
+100 ნაწილი, 300 გაკვეთილი, სალაპარაკო სავარჯიშოები, AI საუბარი, მოსმენა, რანკი, მიღწევები და Telegram ბოტი.
 
-## საქაღალდეების სტრუქტურა
+## სტრუქტურა
 ```
-wrangler.jsonc        ← Cloudflare Worker-ის პარამეტრები
-src/worker.js         ← /api/stt — ხმის ტექსტად გადაქცევა (გამოთქმის შემოწმება)
-public/index.html     ← აპი
-public/units/a1.js    ← ნაწილები 11–20 (A1)
-public/units/a2.js    ← ნაწილები 21–45 (A2)
-public/units/b1.js    ← ნაწილები 46–75 (B1)
-public/units/b2.js    ← ნაწილები 76–100 (B2)
+wrangler.jsonc          ← Cloudflare-ის პარამეტრები (საცავი, cron, AI)
+src/worker.js           ← სერვერი: ხმა, AI საუბარი, რანკის ცხრილი, ბოტი, შეხსენებები
+public/index.html       ← აპი
+public/js/features.js   ← რანკი, გამეორება, საუბარი, მოსმენა, ტესტი, პროფილი
+public/content/         ← საუბრის სცენარები და მოსასმენი დიალოგები
+public/units/           ← ნაწილები 11–100
 ```
-ნაწილები 1–10 თავად `index.html`-შია.
 
-## GitHub-ზე განახლება
-1. რეპოზიტორიიდან წაშალე ძველი `index.html` (ფაილი → ⋯ → **Delete file** → Commit).
-2. **Add file → Upload files** → გადაათრიე ამ საქაღალდის **შიგთავსი** (`wrangler.jsonc`, `src`, `public`, `README.md`) → **Commit changes**.
-3. Cloudflare ავტომატურად ააწყობს და გაუშვებს (1–2 წუთი).
+## განახლება GitHub-ზე
+ზიპის შიგთავსი (`wrangler.jsonc`, `src`, `public`, `README.md`) ატვირთე რეპოზიტორიაში იმავე ადგილას, ძველის ჩანაცვლებით → Commit. Cloudflare თავისით ააწყობს.
 
-## გამოთქმის შემოწმების ჩართვა
-Cloudflare → **Workers & Pages → gokskii → Settings → Variables and Secrets → Add**:
+## Cloudflare-ის საიდუმლოები
+**gokskii → Settings → Variables and Secrets** (ტიპი: Secret):
+- `TELEGRAM_BOT_TOKEN` — სავალდებულო: ბოტი, შეხსენებები, რანკის ცხრილი.
+- `OPENAI_API_KEY` — რეკომენდებული: ბუნებრივი ხმა, ზუსტი გამოთქმის შემოწმება, ჭკვიანი AI საუბარი.
 
-| სახელი | ტიპი | მნიშვნელობა |
-|---|---|---|
-| `OPENAI_API_KEY` | Secret | შენი OpenAI გასაღები (გირჩევ — ყველაზე ზუსტია) |
-| `TELEGRAM_BOT_TOKEN` | Secret | @gokskibot-ის ტოკენი (BotFather-იდან) — სხვები ვერ გამოიყენებენ შენს ლიმიტს |
-
-OpenAI გასაღების გარეშე Cloudflare-ის უფასო Workers AI იმუშავებს (დღიური ლიმიტით).
+## ბოტი
+პირველ გახსნაზე აპი ბოტს ავტომატურად მიაბამს სერვერს (webhook). კომპიუტერზე გაშვებული ძველი Node.js ბოტი აღარ არის საჭირო — გამორთე.
+ბრძანებები: `/start`, `/stats`, `/remind` (ჩართვა/გამორთვა), `/remind 21` (დრო), `/reset`.
 
 ## პროგრესი
-ინახება Telegram-ის ანგარიშზე. ახალი ნაწილები ყოველთვის **ბოლოში** ემატება, ამიტომ პროგრესი არასდროს იკარგება.
+ინახება Telegram-ის ანგარიშზე და ერთიანდება ყველა მოწყობილობას შორის. ახალი ნაწილები ყოველთვის ბოლოში ემატება.

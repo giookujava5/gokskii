@@ -10,6 +10,17 @@
   "ai": {
     "binding": "AI"
   },
+  // პროგრესის, რანკის ცხრილისა და შეხსენებების საცავი
+  "durable_objects": {
+    "bindings": [{ "name": "STORE", "class_name": "GokskiStore" }]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["GokskiStore"] }
+  ],
+  // ყოველ საათში: საღამოს შეხსენებები და კვირის ანგარიში
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
   "workers_dev": true,
   "preview_urls": false
 }
