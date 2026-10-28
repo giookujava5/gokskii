@@ -5,6 +5,72 @@
 const IN_TG = !!(window.Telegram && Telegram.WebApp && Telegram.WebApp.initData);
 const BOT_USER = 'gokskibot';
 
+// ====================== ენები ======================
+// თითო ენას ცალკე აქვს: პროგრესი, XP, streak, რანკი, სიტყვების გამეორება, მიღწევები და ცხრილი.
+// ახალი ენა: აქ ჩანაწერი + index.html-ში LANGDATA და units/<lang>, content/<lang> ფაილები + worker-ის LANGS.
+const LANGS = {
+  en: { flag: '🇬🇧', ka: 'ინგლისური', adv: 'ინგლისურად', obj: 'ინგლისურ', acc: 'ინგლისურს', bcp: 'en-US', tutor: 'Mr. Ben' },
+  de: { flag: '🇩🇪', ka: 'გერმანული', adv: 'გერმანულად', obj: 'გერმანულ', acc: 'გერმანულს', bcp: 'de-DE', tutor: 'Herr Ben' },
+};
+const LANG_KEY = 'gokski-lang';
+const lsKey = l => l === 'en' ? 'gokski-v1' : `gokski-${l}-v1`;
+let LANG = null;
+try { LANG = localStorage.getItem(LANG_KEY); } catch (e) {}
+var NEEDPICK = false;
+if (!LANGS[LANG]) {
+  // ძველი მომხმარებელი, რომელსაც ინგლისურის პროგრესი აქვს, პირდაპირ ინგლისურზე რჩება
+  let hadEn = false;
+  try { const r = JSON.parse(localStorage.getItem('gokski-v1') || localStorage.getItem('mrben-v1') || 'null'); hadEn = !!(r && (r.xp > 0 || Object.keys(r.prog || {}).length)); } catch (e) {}
+  LANG = 'en'; NEEDPICK = !hadEn;
+  if (hadEn) { try { localStorage.setItem(LANG_KEY, 'en'); } catch (e) {} }
+}
+const LG = () => LANGS[LANG];
+const CLOUD_REMOTE = {};
+function setLang(l) {
+  if (!LANGS[l]) return;
+  const first = NEEDPICK;
+  document.querySelectorAll('.modal').forEach(m => m.remove());
+  if (!first && l === LANG) { view = 'path'; render(); return; }
+  stopSpeech(); recStop();
+  if (!first) save();
+  NEEDPICK = false; LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch (e) {}
+  cloudSetLang(l);
+  useLangData(l);
+  S = loadLocal(l);
+  if (CLOUD_REMOTE[l]) { try { S = mergeState(S, CLOUD_REMOTE[l]); } catch (e) { console.error(e); } delete CLOUD_REMOTE[l]; }
+  srsDirty = true; ttsCache.clear(); ttsOff = false; SV.board = null; SV.boardErr = ''; pickVoice();
+  L = null; T = null; LS = null;
+  refreshDay(); syncServer();
+  view = 'path'; render(); window.scrollTo(0, 0);
+  toast(`${LG().flag} ${first ? 'დავიწყოთ' : 'ახლა სწავლობ'}: <b>${LG().ka}</b>`, 2200);
+  prefetchAhead();
+}
+function langStats(l) {
+  const st = l === LANG ? S : loadLocal(l), R = st.rank;
+  const done = Object.values(st.prog || {}).filter(v => v >= LESSONS).length;
+  return { xp: st.xp || 0, unit: done, rank: rankLabel(R), t: R.t, d: R.d, streak: st.streak || 0, fresh: !(st.xp > 0) };
+}
+function langCards(active) {
+  return Object.entries(LANGS).map(([k, g]) => {
+    const st = langStats(k), cur = active && k === LANG;
+    const sub = st.fresh ? 'A1-დან B2-მდე · 100 ნაწილი' : `${st.rank} · ${st.xp} XP · ${st.unit} ნაწილი · 🔥${st.streak}`;
+    return `<button class="lcard" data-setlang="${k}" ${cur ? 'aria-current="true"' : ''}><span class="fl">${g.flag}</span><span><b>${g.ka}</b><small>${sub}</small></span><span class="go2">${cur ? '✓' : '›'}</span></button>`;
+  }).join('');
+}
+function renderPicker() {
+  $('#app').innerHTML = `<main class="wrap picker"><div class="pk-head">${goki('wave')}<h1>რომელი ენა ვისწავლოთ?</h1><p>ახსნები და თარგმანები ქართულადაა.</p></div>
+    <div class="langs">${langCards(false)}</div>
+    <p class="pk-note">ყოველ ენას ცალკე პროგრესი, რანკი და streak აქვს. ენის შეცვლა ნებისმიერ დროს შეგიძლია ზედა დროშით.</p></main>`;
+}
+function openLangMenu() {
+  const m = document.createElement('div'); m.className = 'modal';
+  m.innerHTML = `<div class="panel" role="dialog" aria-modal="true" aria-label="ენის არჩევა"><div class="ph">${goki('happy', '')}<h3>ენის არჩევა<small>პროგრესი თითო ენაზე ცალკე ინახება</small></h3></div>
+    <div class="langs" style="margin-top:6px">${langCards(true)}</div><button class="cta ghost" data-close>დახურვა</button></div>`;
+  m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-close]')) m.remove(); });
+  document.body.appendChild(m);
+}
+
 // ====================== დღეები და კვირები ======================
 function dayNo(d = new Date()) { return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5); }
 function dayNoOf(s) { if (!s) return 0; const [y, m, dd] = String(s).split('-').map(Number); return Math.floor(Date.UTC(y, m - 1, dd) / 864e5); }
@@ -186,40 +252,56 @@ function srsDecode(strs) {
 }
 
 // ====================== Telegram-ის საცავი ======================
+// ინგლისური ძველ გასაღებებზე რჩება (gokski, gsrs0-11); სხვა ენები: g_<lang>, g_<lang>_s0-11
 const SRS_KEYS = Array.from({ length: 12 }, (_, i) => 'gsrs' + i);
-const cloudSrsCache = [];
-function cloudPut() {
+const cloudKeys = l => l === 'en' ? { main: 'gokski', srs: SRS_KEYS } : { main: `g_${l}`, srs: Array.from({ length: 12 }, (_, i) => `g_${l}_s${i}`) };
+const cloudSrsCache = {};
+function cloudSetLang(l) {
   const cs = window.Telegram && Telegram.WebApp && Telegram.WebApp.CloudStorage;
   if (!IN_TG || !cs) return;
+  try { cs.setItem('glang', l, cloudCb); } catch (e) {}
+}
+function cloudPut() {
+  const cs = window.Telegram && Telegram.WebApp && Telegram.WebApp.CloudStorage;
+  if (!IN_TG || !cs || NEEDPICK) return;
+  const K = cloudKeys(LANG), cache = cloudSrsCache[LANG] = cloudSrsCache[LANG] || [];
   const main = Object.assign({}, S); delete main.srs; delete main.frozeNote; delete main.decayNote;
   let js = JSON.stringify(main);
   if (js.length > 4000) { main.mistakes = (main.mistakes || []).slice(-15); const h = {}; Object.keys(main.hist).sort((a, b) => b - a).slice(0, 10).forEach(k => h[k] = main.hist[k]); main.hist = h; js = JSON.stringify(main); }
-  try { cs.setItem('gokski', js, cloudCb); } catch (e) { markPending(); }
+  try { cs.setItem(K.main, js, cloudCb); } catch (e) { markPending(); }
   if (srsDirty) {
     srsDirty = false;
     const ch = srsChunks();
-    SRS_KEYS.forEach((k, i) => { const v = ch[i] || ''; if (v !== cloudSrsCache[i]) { cloudSrsCache[i] = v; try { cs.setItem(k, v, (err) => { if (err) { cloudSrsCache[i] = null; srsDirty = true; markPending(); } }); } catch (e) { markPending(); } } });
+    K.srs.forEach((k, i) => { const v = ch[i] || ''; if (v !== cache[i]) { cache[i] = v; try { cs.setItem(k, v, (err) => { if (err) { cache[i] = null; srsDirty = true; markPending(); } }); } catch (e) { markPending(); } } });
   }
 }
+// ყველა ენის მონაცემი ერთად იტვირთება: cb({en: state|null, de: ...}, err, glang)
 function cloudLoad(cb) {
   const cs = Telegram.WebApp.CloudStorage;
+  const langs = Object.keys(LANGS);
   const done = (vals, err) => {
     if (err) return cb(null, err);
-    let main = null;
-    try { main = vals.gokski ? JSON.parse(vals.gokski) : null; } catch (e) {}
-    SRS_KEYS.forEach((k, i) => cloudSrsCache[i] = vals[k] || '');
-    const srs = srsDecode(SRS_KEYS.map(k => vals[k] || ''));
-    if (main) main.srs = srs; else if (Object.keys(srs).length) main = { srs };
-    cb(main, null);
+    const out = {};
+    for (const l of langs) {
+      const K = cloudKeys(l);
+      let main = null;
+      try { main = vals[K.main] ? JSON.parse(vals[K.main]) : null; } catch (e) {}
+      cloudSrsCache[l] = K.srs.map(k => vals[k] || '');
+      const srs = srsDecode(cloudSrsCache[l]);
+      if (main) main.srs = srs; else if (Object.keys(srs).length) main = { srs };
+      out[l] = main;
+    }
+    cb(out, null, vals.glang || '');
   };
-  if (typeof cs.getItems === 'function') cs.getItems(['gokski', ...SRS_KEYS], (err, vals) => done(vals || {}, err));
+  const keys = ['glang']; langs.forEach(l => { const K = cloudKeys(l); keys.push(K.main, ...K.srs); });
+  if (typeof cs.getItems === 'function') cs.getItems(keys, (err, vals) => done(vals || {}, err));
   else cs.getItem('gokski', (err, v) => done({ gokski: v }, err));
 }
 
 // ====================== სერვერი ======================
 const SV = { remind: null, remindHour: 20, started: false, board: null, boardErr: '', seg: 'rank' };
 async function api(path, body, opts = {}) {
-  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': opts.type || 'application/json', 'X-Init-Data': IN_TG ? Telegram.WebApp.initData : '' }, body: opts.raw ? body : JSON.stringify(body || {}) });
+  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': opts.type || 'application/json', 'X-Init-Data': IN_TG ? Telegram.WebApp.initData : '', 'X-Lang': LANG }, body: opts.raw ? body : JSON.stringify(body || {}) });
   if (opts.bin) { if (!r.ok) throw Object.assign(new Error('HTTP ' + r.status), { status: r.status }); return r.arrayBuffer(); }
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw Object.assign(new Error(j.error || ('HTTP ' + r.status)), { status: r.status });
@@ -228,10 +310,10 @@ async function api(path, body, opts = {}) {
 let syncT = null;
 function progressBody(extra) {
   const R = S.rank;
-  return Object.assign({ xp: S.xp, streak: S.streak, lastDay: S.lastDay, unit: curUnit(), tier: R.t, div: R.d, rp: R.rp, wk: S.wk.id, wkXp: S.wk.xp, wkLes: S.wk.les }, extra || {});
+  return Object.assign({ lang: LANG, xp: S.xp, streak: S.streak, lastDay: S.lastDay, unit: curUnit(), tier: R.t, div: R.d, rp: R.rp, wk: S.wk.id, wkXp: S.wk.xp, wkLes: S.wk.les }, extra || {});
 }
 function syncServer(extra) {
-  if (!IN_TG) return;
+  if (!IN_TG || NEEDPICK) return;
   clearTimeout(syncT);
   syncT = setTimeout(() => api('/api/progress', progressBody(extra)).then(r => {
     SV.remind = r.remind; SV.remindHour = r.remindHour; SV.started = r.started;
@@ -271,7 +353,7 @@ function localTTS(text, o, gen) {
   return new Promise(res => {
     if (!('speechSynthesis' in window)) return res();
     try {
-      const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; if (voice) u.voice = voice;
+      const u = new SpeechSynthesisUtterance(text); u.lang = LG().bcp; if (voice) u.voice = voice;
       u.rate = o.slow ? .6 : .92; u.pitch = o.voice === 'onyx' || o.voice === 'echo' ? .8 : 1.05;
       const to = setTimeout(res, 2500 + text.length * 110);
       u.onend = u.onerror = () => { clearTimeout(to); res(); };
@@ -312,7 +394,7 @@ function clearPending() { try { localStorage.removeItem(PENDING_KEY); } catch (e
 const isPending = () => { try { return localStorage.getItem(PENDING_KEY) === '1'; } catch (e) { return false; } };
 function cloudCb(err) { if (err) markPending(); }
 
-function ttsUrl(text, o) { return `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(o.voice || 'nova')}${o.slow ? '&slow=1' : ''}`; }
+function ttsUrl(text, o) { return `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(o.voice || 'nova')}${o.slow ? '&slow=1' : ''}${LANG !== 'en' ? '&lang=' + LANG : ''}`; }
 async function ttsFetch(text, o) {
   const r = await fetch(ttsUrl(text, o), { headers: { 'X-Init-Data': IN_TG ? Telegram.WebApp.initData : '' } });
   if (!r.ok) throw Object.assign(new Error('HTTP ' + r.status), { status: r.status });
@@ -329,13 +411,20 @@ function cloudBoot(after) {
   const fail = () => { if (finished) return; finished = true; cloudBooting = false; markPending(); if (!booted) { booted = true; if (!FULLSCREEN.includes(view)) render(); } };
   const to = setTimeout(fail, 7000);
   try {
-    cloudLoad((remote, err) => {
+    cloudLoad((remotes, err, glang) => {
       if (finished) return;
       clearTimeout(to);
       if (err) return fail();
       finished = true; cloudBooting = false;
-      if (remote) { try { S = mergeState(S, remote); } catch (e) { console.error(e); } }
-      cloudReady = true; srsDirty = true; SRS_KEYS.forEach((_, i) => { if (cloudSrsCache[i] === undefined) cloudSrsCache[i] = ''; });
+      for (const l of Object.keys(remotes)) { if (remotes[l]) CLOUD_REMOTE[l] = remotes[l]; else delete CLOUD_REMOTE[l]; }
+      if (NEEDPICK) {
+        // სხვა მოწყობილობაზე უკვე არჩეული ენა
+        const en = remotes.en, pick0 = LANGS[glang] ? glang : (en && (en.xp > 0 || Object.keys(en.prog || {}).length) ? 'en' : null);
+        if (pick0) { NEEDPICK = false; LANG = pick0; try { localStorage.setItem(LANG_KEY, pick0); } catch (e) {} useLangData(pick0); S = loadLocal(pick0); pickVoice(); }
+      }
+      const remote = CLOUD_REMOTE[LANG];
+      if (remote) { try { S = mergeState(S, remote); } catch (e) { console.error(e); } delete CLOUD_REMOTE[LANG]; }
+      cloudReady = true; srsDirty = true;
       refreshDay(); clearPending();
       if (!FULLSCREEN.includes(view)) render();
       booted = true; syncServer();
@@ -358,8 +447,9 @@ window.addEventListener('online', () => {
 setInterval(() => { if (IN_TG && online() && (isPending() || !cloudReady) && !cloudBooting) cloudBoot(); }, 45000);
 
 // ხმის წინასწარი ჩამოტვირთვა: მიმდინარე და შემდეგი ნაწილი, ფონზე
-function audioUnits() { try { return JSON.parse(localStorage.getItem(AUDIO_KEY) || '[]'); } catch (e) { return []; } }
-function setAudioUnits(a) { try { localStorage.setItem(AUDIO_KEY, JSON.stringify(a.slice(-60))); } catch (e) {} }
+const audioKey = () => AUDIO_KEY + (LANG === 'en' ? '' : '-' + LANG);
+function audioUnits() { try { return JSON.parse(localStorage.getItem(audioKey()) || '[]'); } catch (e) { return []; } }
+function setAudioUnits(a) { try { localStorage.setItem(audioKey(), JSON.stringify(a.slice(-60))); } catch (e) {} }
 let prefetching = false;
 async function prefetchUnits(units, onStep) {
   if (!IN_TG || ttsOff || !online() || prefetching || !('serviceWorker' in navigator) || !navigator.serviceWorker.controller) return false;
@@ -545,7 +635,7 @@ function renderTalkList() {
   const my = levelOf(curUnit())[1];
   const card = t => `<button class="tcard" data-talk="${t.id}"><span class="ti">${t.icon}</span><b>${t.title}</b><small>${t.en}</small>${S.talks[t.id] ? `<span class="tdone">✓ ${S.talks[t.id]}</span>` : ''}</button>`;
   let h = topBar() + `<main class="wrap home"><h1 class="ptitle">საუბარი</h1>
-    <div class="card feature">${goki('wave')}<div><h3>ილაპარაკე ინგლისურად</h3><p>აირჩიე სიტუაცია და ესაუბრე AI-ს ხმით ან ტექსტით. შეცდომებს ქართულად გაგისწორებს.</p></div></div>
+    <div class="card feature">${goki('wave')}<div><h3>ილაპარაკე ${LG().adv}</h3><p>აირჩიე სიტუაცია და ესაუბრე AI-ს ხმით ან ტექსტით. შეცდომებს ქართულად გაგისწორებს.</p></div></div>
     ${online() ? '' : '<div class="card offnote">📴 AI საუბარს ინტერნეტი სჭირდება. ამასობაში გაიარე გაკვეთილები ან გამეორება — ისინი ოფლაინაც მუშაობს.</div>'}
     <div class="tgrid one">${card(TALKS[0])}</div>`;
   for (const lv of ['A1', 'A2', 'B1', 'B2']) {
@@ -560,7 +650,7 @@ function openTalk(id) {
   if (!online()) { toast('📴 AI საუბარს ინტერნეტი სჭირდება.'); return; }
   const sc = TALKS[i], my = levelOf(curUnit())[1];
   T = { sc, msgs: [], done: new Set(), turns: 0, corrections: 0, finished: false, busy: false, err: '', hint: '', showHint: false, showGoal: true, rec: false, stt: false, voice: id === 'free' ? 'onyx' : TALK_VOICES[i % 4],
-    api: { role: sc.role, setting: sc.setting, level: sc.lvl || my, tasks: sc.tasks.map(t => t[1]) } };
+    api: { lang: LANG, role: sc.role, setting: sc.setting, level: sc.lvl || my, tasks: sc.tasks.map(t => t[1]) } };
   view = 'chat'; syncBack();
   $('#app').innerHTML = `<div class="player chat"><div class="wrap p-top"><button class="x" data-back aria-label="გასვლა">${ICON.x}</button>
       <div class="ct-title"><b>${sc.icon} ${sc.title}</b><small>${sc.en}${sc.lvl ? ' · ' + sc.lvl : ''}</small></div>
@@ -589,7 +679,7 @@ function renderTalkLog() {
   $('#bar').innerHTML = T.finished
     ? `<button class="cta" data-tfinish>საუბრის დასრულება 🎉</button>`
     : `${T.hint ? `<button class="ct-hint" data-hint>${T.showHint ? '💡 ' + esc(T.hint) : '💡 მინიშნება'}</button>` : ''}
-      <div class="ct-row"><input id="tin" class="typein" autocomplete="off" autocapitalize="sentences" placeholder="დაწერე ინგლისურად…" ${T.busy || T.stt ? 'disabled' : ''}>
+      <div class="ct-row"><input id="tin" class="typein" autocomplete="off" autocapitalize="sentences" placeholder="დაწერე ${LG().adv}…" ${T.busy || T.stt ? 'disabled' : ''}>
       <button class="ct-send" data-tsend aria-label="გაგზავნა" ${T.busy ? 'disabled' : ''}>➤</button>
       <button class="ct-mic ${T.rec ? 'rec' : ''}" data-tmic aria-label="ჩაწერა" ${T.busy || T.stt ? 'disabled' : ''}>${ICON.mic}</button></div>
       <p class="ct-state">${T.rec ? 'გისმენ… როცა დაამთავრებ, ისევ დააჭირე' : T.stt ? 'ვამუშავებ ხმას…' : canEnd ? '<button class="linkbtn" data-tfinish>საუბრის დასრულება</button>' : 'დააჭირე მიკროფონს და ილაპარაკე'}</p>`;
@@ -726,7 +816,7 @@ function renderPracticeTab() {
       <button class="cta sm" data-practice ${any ? '' : 'disabled'}>დაწყება</button></div>
     <div class="lvl"><span class="lvl-code">🎧</span><span>მოსმენა</span><i></i></div>
     <div class="tgrid">${LISTENS.map(d => `<button class="tcard" data-listen="${d.id}"><span class="lvb">${d.lvl}</span><b>${esc(d.title)}</b><small>${d.who.join(' · ')}</small>${S.listens[d.id] !== undefined ? `<span class="tdone">${S.listens[d.id]}/${d.q.length}</span>` : ''}</button>`).join('')}</div>
-    <div class="card row2"><div><h3>დონის ტესტი</h3><p>${S.placed ? 'ტესტი უკვე გაიარე — შეგიძლია ხელახლა შეამოწმო დონე.' : 'იცი ინგლისური? 5 წუთში გაიგე დონე და გამოტოვე ნაცნობი ნაწილები.'}</p></div>
+    <div class="card row2"><div><h3>დონის ტესტი</h3><p>${S.placed ? 'ტესტი უკვე გაიარე — შეგიძლია ხელახლა შეამოწმო დონე.' : `იცი ${LG().ka}? 5 წუთში გაიგე დონე და გამოტოვე ნაცნობი ნაწილები.`}</p></div>
       <button class="cta sm ghost" data-test>ტესტი</button></div>
   </main>` + navBar();
   $('#app').innerHTML = h;
@@ -737,7 +827,7 @@ function renderRank() {
   const R = S.rank, Tt = RANK_T[Math.min(R.t, LEGEND)], pct = R.t >= LEGEND ? 100 : Math.min(100, R.rp);
   const next = R.t >= LEGEND ? 'უმაღლესი რანკი' : R.promo ? 'დაწინაურების მატჩი' : R.d < 2 ? `შემდეგი: ${RANK_T[R.t].ka} ${RANK_D[R.d + 1]}` : `შემდეგი: მატჩი ${RANK_T[R.t + 1].ka}-ზე`;
   const got = ACH.filter(a => S.ach[a[0]]).length;
-  let h = topBar() + `<main class="wrap home"><h1 class="ptitle">რანკი</h1>
+  let h = topBar() + `<main class="wrap home"><h1 class="ptitle">რანკი <small style="font-size:16px;color:var(--muted);font-weight:700">${LG().flag} ${LG().ka}</small></h1>
     <section class="rkcard" style="--tc:${Tt.c};--tc2:${Tt.c2}">
       <div class="rkem">${emblem(R.t, R.d, 112)}</div>
       <h2>${rankLabel()}</h2><p class="rkpts">${rankPts()}</p>
@@ -759,13 +849,14 @@ function renderRank() {
         <li><b>RP 0-ზე ქვემოთ</b> → ქვედა დივიზიონში ჩამოდიხარ 70 RP-ით.</li>
         <li><b>ოქროდან ზემოთ</b> ყოველი გამოტოვებული დღე −15 RP. streak-ის გაყინვა ამისგანაც გიცავს.</li>
       </ul></details>
-    <div class="card"><div class="cardh"><h3>ცხრილი</h3><div class="seg"><button data-seg="rank" aria-pressed="${SV.seg === 'rank'}">რანკი</button><button data-seg="week" aria-pressed="${SV.seg === 'week'}">კვირის XP</button></div></div>
+    <div class="card"><div class="cardh"><h3>ცხრილი ${LG().flag}</h3><div class="seg"><button data-seg="rank" aria-pressed="${SV.seg === 'rank'}">რანკი</button><button data-seg="week" aria-pressed="${SV.seg === 'week'}">კვირის XP</button></div></div>
       <div id="board">${boardHTML()}</div>
       ${IN_TG ? '<button class="cta ghost" data-share>მოიწვიე მეგობარი</button>' : ''}</div>
     ${weekHTML()}
     <div class="card"><div class="cardh"><h3>მიღწევები</h3><b class="cnt">${got} / ${ACH.length}</b></div>
       <div class="achs">${ACH.map(([id, ic, t, d]) => `<div class="ach ${S.ach[id] ? 'on' : ''}" title="${esc(d)}"><span>${ic}</span><b>${esc(t)}</b><small>${esc(d)}</small></div>`).join('')}</div></div>
     <div class="card"><h3>პარამეტრები</h3>
+      <div class="setrow"><span>🌐 ენა: ${LG().flag} ${LG().ka}</span><button class="cta sm ghost" data-langmenu>შეცვლა</button></div>
       <div class="setrow"><span>❄️ streak-ის გაყინვა</span><b>${S.freeze} / 2</b></div>
       <p class="setnote">ყოველ 7 დღიან streak-ზე 1 გაყინვას იღებ. თუ დღეს გამოტოვებ, გაყინვა streak-ს და RP-ს გადაარჩენს.</p>
       ${IN_TG ? `<div class="setrow"><span>📥 ოფლაინ ხმა</span><button class="cta sm ghost" data-offdl>ჩამოტვირთვა</button></div>
@@ -828,6 +919,8 @@ function goBack() {
 }
 function featureClick(t) {
   const ds = t.dataset;
+  if (ds.setlang) { setLang(ds.setlang); return true; }
+  if (ds.langmenu !== undefined) { openLangMenu(); return true; }
   if (ds.review !== undefined) { startLesson(0, 0, 'review'); return true; }
   if (ds.test !== undefined) { startLesson(0, 0, 'test'); return true; }
   if (ds.promo !== undefined) { if (S.rank.promo) startLesson(0, 0, 'promo'); return true; }
@@ -838,7 +931,7 @@ function featureClick(t) {
   if (ds.seg) { SV.seg = ds.seg; document.querySelectorAll('[data-seg]').forEach(b => b.setAttribute('aria-pressed', b === t)); $('#board').innerHTML = boardHTML(); return true; }
   if (ds.offdl !== undefined) { downloadOffline(t); return true; }
   if (ds.share !== undefined) {
-    const url = `https://t.me/share/url?url=${encodeURIComponent('https://t.me/' + BOT_USER)}&text=${encodeURIComponent('ინგლისურს ვსწავლობ Gokski-ში 🇬🇧 შემომიერთდი და შევეჯიბროთ!')}`;
+    const url = `https://t.me/share/url?url=${encodeURIComponent('https://t.me/' + BOT_USER)}&text=${encodeURIComponent(`${LG().acc} ვსწავლობ Gokski-ში ${LG().flag} შემომიერთდი და შევეჯიბროთ!`)}`;
     try { Telegram.WebApp.openTelegramLink(url); } catch (e) {}
     return true;
   }

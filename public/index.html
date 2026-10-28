@@ -428,6 +428,24 @@ main.home{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
 .q h4{margin:0 0 8px;font-size:16px}
 .q .opt{font-size:15px;padding:12px 14px}
 .chip.off{padding:5px 8px;font-size:14px;background:var(--bad-bg);box-shadow:0 0 0 1px var(--bad) inset}
+/* ---------- ენები ---------- */
+.c-lang{padding:4px 9px;font-size:18px;line-height:1.2;cursor:pointer;color:var(--ink)}
+.c-lang:active{transform:translateY(1px)}
+@media (max-width:390px){.top .wrap{gap:6px}.wm{font-size:21px}.logo svg{width:30px;height:30px}.chip{padding:4px 8px 4px 6px;font-size:14px}.chip svg{width:17px;height:17px}.c-lang{padding:3px 7px;font-size:16px}}
+.picker{min-height:100%;display:flex;flex-direction:column;justify-content:center;padding-block:28px calc(28px + env(safe-area-inset-bottom,0px))}
+.picker .pk-head{text-align:center}
+.picker .pk-head svg{width:110px;height:110px}
+.picker h1{margin:6px 0 4px;font-family:var(--f-display);font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+.picker .pk-head p{margin:0;color:var(--muted)}
+.langs{display:grid;gap:12px;margin-top:22px}
+.lcard{display:flex;align-items:center;gap:14px;width:100%;padding:16px;border-radius:20px;background:var(--surface);box-shadow:0 0 0 1px var(--line) inset,0 4px 0 var(--line);text-align:left;color:var(--ink)}
+.lcard:active{transform:translateY(2px);box-shadow:0 0 0 1px var(--line) inset,0 2px 0 var(--line)}
+.lcard[aria-current="true"]{box-shadow:0 0 0 2px var(--teal) inset,0 4px 0 var(--teal-d)}
+.lcard .fl{font-size:38px;line-height:1;flex:none}
+.lcard b{display:block;font-size:19px;font-weight:800}
+.lcard small{display:block;color:var(--muted);font-size:14px;margin-top:2px}
+.lcard .go2{margin-left:auto;color:var(--teal);font-weight:800;font-size:22px}
+.pk-note{margin:18px 0 0;text-align:center;color:var(--muted);font-size:14px}
 .offnote{background:var(--bad-bg);box-shadow:0 0 0 1px var(--bad) inset;color:var(--ink);font-weight:600;font-size:14px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -438,16 +456,19 @@ main.home{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
 <canvas id="confetti" hidden></canvas>
 
 <script>
-// ნაწილების ჩამტვირთავი: units/*.js ფაილები U(...)-ს იძახებენ
-window.MORE_UNITS = [];
+// ნაწილების ჩამტვირთავი: units/*.js ფაილები U(...)-ს იძახებენ. U.lang — რომელ ენას ეკუთვნის.
+// ახალი ენის დასამატებლად: LANGS-ში ჩანაწერი + units/<lang>/*.js + content/<lang>/*.js
+window.LANGDATA = { en: { units: [] }, de: { units: [] } };
 function U(t, en, tip, w, s){
   const bold = x => x.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
   const html = tip.trim().split('\n').map(l => { l = l.trim(); if (!l) return '';
     if (l.startsWith('>')) { const [a, k] = l.slice(1).split(' = '); return `<span class="ex"><b>${a.trim()}</b> — ${(k||'').trim()}</span>`; }
     return `<p>${bold(l)}</p>`; }).join('');
   const pairs = x => x.trim().split(';').map(q => q.split('|').map(y => y.trim())).filter(q => q.length === 2);
-  window.MORE_UNITS.push({t, en, tip: html, w: pairs(w), s: pairs(s)});
+  const L = window.LANGDATA[U.lang] = window.LANGDATA[U.lang] || { units: [] };
+  L.units.push({t, en, tip: html, w: pairs(w), s: pairs(s)});
 }
+U.lang = 'en';
 </script>
 <script src="units/a1.js"></script>
 <script src="units/a2.js"></script>
@@ -455,10 +476,18 @@ function U(t, en, tip, w, s){
 <script src="units/b2.js"></script>
 <script src="content/talk.js"></script>
 <script src="content/listen.js"></script>
+<script>U.lang = 'de';</script>
+<script src="units/de/a1.js"></script>
+<script src="units/de/a2.js"></script>
+<script src="units/de/b1.js"></script>
+<script src="units/de/b2.js"></script>
+<script src="content/de/talk.js"></script>
+<script src="content/de/listen.js"></script>
+<script>U.lang = 'en';</script>
 <script src="js/features.js"></script>
 <script>
 // ====================== CONTENT ======================
-const UNITS = [
+var UNITS = [
  {t:'მისალმება', en:'Greetings', c:'#2563EB', d:'#1846B0',
   tip:`<p><b>How are you?</b> — როგორ ხარ? ყველაზე ხშირი პასუხია <b>I am fine</b> (კარგად ვარ).</p>
   <span class="ex"><b>Hello!</b> — გამარჯობა!</span><span class="ex"><b>Hi!</b> — სალამი! (უფრო თავისუფალი)</span>
@@ -537,22 +566,32 @@ const UNITS = [
   w:[['city','ქალაქი'],['street','ქუჩა'],['shop','მაღაზია'],['bus','ავტობუსი'],['taxi','ტაქსი'],['hotel','სასტუმრო'],['left','მარცხნივ'],['right','მარჯვნივ'],['where','სად'],['ticket','ბილეთი']],
   s:[['Where is the hotel?','სად არის სასტუმრო?'],['Turn left','მოუხვიე მარცხნივ'],['I need a taxi','ტაქსი მჭირდება'],['The shop is open','მაღაზია ღიაა'],['One ticket, please','ერთი ბილეთი, თუ შეიძლება']]},
 ];
-UNITS.push(...(window.MORE_UNITS || []));
+LANGDATA.en.units = UNITS.concat(LANGDATA.en.units);
+LANGDATA.en.talks = window.TALKS || []; LANGDATA.en.listens = window.LISTENS || [];
+LANGDATA.de.talks = window.TALKS_DE || []; LANGDATA.de.listens = window.LISTENS_DE || [];
 const PAL = [['#2563EB','#1846B0'],['#6D4AE8','#4B2FB8'],['#0891B2','#066A83'],['#E0731A','#AE540C'],['#DB2777','#A51A59'],['#16A34A','#0F7A36'],['#4F46E5','#3730A3'],['#0284C7','#025E91'],['#C2410C','#8F2F08'],['#1E40AF','#152E7E']];
-UNITS.forEach((u, i) => { u.c = PAL[i % PAL.length][0]; u.d = PAL[i % PAL.length][1]; });
+Object.values(LANGDATA).forEach(D => D.units.forEach((u, i) => { u.c = PAL[i % PAL.length][0]; u.d = PAL[i % PAL.length][1]; }));
+// მიმდინარე ენის კონტენტი
+function useLangData(l){ const D = LANGDATA[l]; UNITS = D.units; window.TALKS = D.talks; window.LISTENS = D.listens; }
+useLangData(LANG);
 const LEVELS = [[0,'A1','დამწყები'],[20,'A2','საბაზისო'],[45,'B1','საშუალო'],[75,'B2','საშუალოზე მაღალი']];
 const levelOf = u => LEVELS.filter(l => u >= l[0]).pop();
 const LESSONS = 3, GOAL = 30;
 
 // ====================== STATE ======================
-const KEY = 'gokski-v1', OLD = 'mrben-v1';
+const OLD = 'mrben-v1';
 const day = (d=new Date()) => `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
 const yesterday = () => { const d=new Date(); d.setDate(d.getDate()-1); return day(d); };
-let S = {xp:0, streak:0, lastDay:'', todayXp:0, todayDate:'', hearts:5, heartsDay:'', prog:{}, mistakes:[]};
-try { const raw = localStorage.getItem(KEY) || localStorage.getItem(OLD); if (raw) S = Object.assign(S, JSON.parse(raw)); } catch(e) {}
-S = normState(S);
+const blankState = () => ({xp:0, streak:0, lastDay:'', todayXp:0, todayDate:'', hearts:5, heartsDay:'', prog:{}, mistakes:[]});
+// თითო ენას თავისი მდგომარეობა აქვს (ინგლისური ძველ გასაღებზე რჩება, რომ არაფერი დაიკარგოს)
+function loadLocal(l){
+  let st = blankState();
+  try { const raw = localStorage.getItem(lsKey(l)) || (l === 'en' ? localStorage.getItem(OLD) : null); if (raw) st = Object.assign(st, JSON.parse(raw)); } catch(e) {}
+  return normState(st);
+}
+let S = loadLocal(LANG);
 var cloudReady = false, booted = false;
-function save(){ S.updated = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) {} if (cloudReady) cloudSave(); }
+function save(){ if (NEEDPICK) return; S.updated = Date.now(); try { localStorage.setItem(lsKey(LANG), JSON.stringify(S)); } catch(e) {} if (cloudReady) cloudSave(); }
 // ორი მოწყობილობის პროგრესის გაერთიანება: ყოველთვის იგება უკეთესი შედეგი, არაფერი იკარგება
 const dnum = s => { if (!s) return 0; const [y,m,d] = String(s).split('-').map(Number); return y*10000 + m*100 + d; };
 function mergeState(a, b){
@@ -601,7 +640,8 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const shuffle = a => { a = a.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.random()*(i+1)|0; [a[i],a[j]]=[a[j],a[i]]; } return a; };
 const pick = a => a[Math.random()*a.length|0];
-const norm = s => s.toLowerCase().replace(/[’`]/g,"'").replace(/[.,?!]/g,'').replace(/\s+/g,' ').trim();
+const fold = s => s.toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss');
+const norm = s => fold(s).replace(/[’`]/g,"'").replace(/[.,?!„“"«»;:]/g,'').replace(/\s+/g,' ').trim();
 function lev(a,b){ const m=[...Array(b.length+1).keys()]; for(let i=1;i<=a.length;i++){ let p=m[0]; m[0]=i; for(let j=1;j<=b.length;j++){ const t=m[j]; m[j]=Math.min(m[j]+1,m[j-1]+1,p+(a[i-1]===b[j-1]?0:1)); p=t; } } return m[b.length]; }
 
 const ICON = {
@@ -651,8 +691,9 @@ function goki(mood='happy', cls='m'){
 // speech
 var canSpeak = ('speechSynthesis' in window) || IN_TG;
 let voice = null;
-function pickVoice(){ if(!canSpeak) return; const v = speechSynthesis.getVoices(); voice = v.find(x=>/en-US/i.test(x.lang)&&/natural|google|samantha|aria|jenny/i.test(x.name)) || v.find(x=>/en-US/i.test(x.lang)) || v.find(x=>/^en/i.test(x.lang)) || null; }
-if (canSpeak) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function pickVoice(){ if(!canSpeak || !('speechSynthesis' in window)) return; const v = speechSynthesis.getVoices(), b = LG().bcp, p = new RegExp('^' + b.slice(0,2), 'i'), full = new RegExp(b, 'i');
+  voice = v.find(x=>full.test(x.lang)&&/natural|google|samantha|aria|jenny|anna|katja|conrad|helena/i.test(x.name)) || v.find(x=>full.test(x.lang)) || v.find(x=>p.test(x.lang)) || null; }
+if (canSpeak && 'speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 let actx;
 function tone(seq, type='sine'){ try { actx = actx || new (window.AudioContext||window.webkitAudioContext)(); let t=actx.currentTime; for (const [f,d] of seq){ const o=actx.createOscillator(), g=actx.createGain(); o.type=type; o.frequency.value=f; g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.16,t+.02); g.gain.exponentialRampToValueAtTime(.0001,t+d); o.connect(g).connect(actx.destination); o.start(t); o.stop(t+d); t+=d*.75; } } catch(e) {} }
 const sfx = { ok:()=>tone([[660,.12],[990,.22]]), bad:()=>tone([[240,.16],[180,.26]],'triangle'), pop:()=>tone([[880,.08]]), done:()=>tone([[523,.12],[659,.12],[784,.12],[1046,.35]]) };
@@ -739,7 +780,7 @@ let view = 'path', L = null;
 function topBar(){
   return `<header class="top"><div class="wrap">
     <div class="logo" aria-label="Gokski">${LOGO}<span class="wm" aria-hidden="true"><span class="a">gok</span><span class="b">SKI</span></span></div>
-    ${netChip()}<span class="chip c-fire" title="დღეები ზედიზედ">${ICON.flame}${S.streak}</span>
+    ${netChip()}<button class="chip c-lang" data-langmenu title="ენის შეცვლა" aria-label="ენა: ${LG().ka}. შეცვლა">${LG().flag}</button><span class="chip c-fire" title="დღეები ზედიზედ">${ICON.flame}${S.streak}</span>
     <span class="chip c-xp" title="სულ XP">${ICON.bolt}${S.xp}</span>
     <span class="chip c-heart" title="სიცოცხლეები">${ICON.heart}${S.hearts}</span>
   </div></header>`;
@@ -754,7 +795,7 @@ function hero(){
   const hi = new Date().getHours(), greet = hi<12 ? 'დილა მშვიდობისა' : hi<18 ? 'გამარჯობა' : 'საღამო მშვიდობისა';
   return `<section class="hero"><div class="hero-row">
       <div class="hero-txt"><small>${greet} · ${levelOf(cu)[1]}</small>
-        <h1>${done ? 'ყველა ნაწილი გავლილია!' : S.xp ? `ნაწილი ${cu+1}: ${UNITS[cu].t}` : 'დავიწყოთ ინგლისური!'}</h1>
+        <h1>${done ? 'ყველა ნაწილი გავლილია!' : S.xp ? `ნაწილი ${cu+1}: ${UNITS[cu].t}` : `დავიწყოთ ${LG().ka}!`}</h1>
         <p>${done ? 'გაიმეორე ვარჯიშში, რომ არ დაგავიწყდეს.' : `გაკვეთილი ${li+1} / ${LESSONS} · ${UNITS[cu].en}`}</p></div>
       <div class="ring" aria-label="დღის მიზანი: ${S.todayXp} / ${GOAL} XP">
         <svg viewBox="0 0 86 86"><circle cx="43" cy="43" r="36" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="9"/>
@@ -814,7 +855,7 @@ function renderWords(){
   $('#app').innerHTML = h;
 }
 function renderPractice(){ renderPracticeTab(); }
-function render(){ if (view==='path') renderPath(); else if (view==='words') renderWords(); else if (view==='talk') renderTalkList(); else if (view==='rank') renderRank(); else renderPractice(); syncBack(); }
+function render(){ if (NEEDPICK) { renderPicker(); syncBack(); return; } if (view==='path') renderPath(); else if (view==='words') renderWords(); else if (view==='talk') renderTalkList(); else if (view==='rank') renderRank(); else renderPractice(); syncBack(); }
 
 function showTip(u){
   const U = UNITS[u];
@@ -857,7 +898,7 @@ function renderEx(){
       body = `<h1 class="ask">რას ნიშნავს?</h1>${bubble(`<button class="spk" data-say="${esc(it.en)}" aria-label="მოუსმინე">${ICON.spk}</button><span class="big">${esc(it.en)}</span>`)}
         <div class="opts">${ex.opts.map((o,k)=>`<button class="opt" data-opt="${k}">${kbd(k)}${esc(o)}</button>`).join('')}</div>`; break;
     case 'pick_en':
-      body = `<h1 class="ask">როგორ იქნება ინგლისურად?</h1>${bubble(`<span class="ka">${esc(it.ka)}</span>`)}
+      body = `<h1 class="ask">როგორ იქნება ${LG().adv}?</h1>${bubble(`<span class="ka">${esc(it.ka)}</span>`)}
         <div class="opts two">${ex.opts.map((o,k)=>`<button class="opt en-o" data-opt="${k}" data-sayopt="${esc(o)}">${kbd(k)}${esc(o)}</button>`).join('')}</div>`; break;
     case 'listen':
       body = `<h1 class="ask">მოისმინე და აირჩიე</h1><div class="hear"><button data-say="${esc(it.en)}" aria-label="მოუსმინე">${ICON.spk}</button><button class="slow" data-say="${esc(it.en)}" data-slow aria-label="ნელა მოუსმინე">${ICON.turtle}</button></div>
@@ -866,13 +907,13 @@ function renderEx(){
       body = `<h1 class="ask">აირჩიე სწორი თარგმანი</h1>${bubble(`<button class="spk" data-say="${esc(it.en)}" aria-label="მოუსმინე">${ICON.spk}</button><span class="mid">${esc(it.en)}</span>`)}
         <div class="opts">${ex.opts.map((o,k)=>`<button class="opt" data-opt="${k}">${kbd(k)}${esc(o)}</button>`).join('')}</div>`; break;
     case 'type':
-      body = `<h1 class="ask">დაწერე ინგლისურად</h1>${bubble(`<span class="ka">${esc(it.ka)}</span>`)}
-        <input class="typein" id="typein" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="დაწერე აქ…" aria-label="პასუხი ინგლისურად">
-        <p class="hint">დიდ ასოებს და წერტილებს მნიშვნელობა არ აქვს.</p>`; break;
+      body = `<h1 class="ask">დაწერე ${LG().adv}</h1>${bubble(`<span class="ka">${esc(it.ka)}</span>`)}
+        <input class="typein" id="typein" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="დაწერე აქ…" aria-label="პასუხი ${LG().adv}">
+        <p class="hint">დიდ ასოებს და წერტილებს მნიშვნელობა არ აქვს.${LANG==='de' ? ' ä ö ü ß შეგიძლია დაწერო ae oe ue ss-ით.' : ''}</p>`; break;
     case 'build':
     case 'build_listen':
       body = (ex.type==='build'
-        ? `<h1 class="ask">თარგმნე ინგლისურად</h1>${bubble(`<span class="ka">${esc(it.ka)}</span>`)}`
+        ? `<h1 class="ask">თარგმნე ${LG().adv}</h1>${bubble(`<span class="ka">${esc(it.ka)}</span>`)}`
         : `<h1 class="ask">შეადგინე, რაც გაიგე</h1><div class="hear"><button data-say="${esc(it.en)}" aria-label="მოუსმინე">${ICON.spk}</button><button class="slow" data-say="${esc(it.en)}" data-slow aria-label="ნელა მოუსმინე">${ICON.turtle}</button></div>`)
         + `<div class="answer" id="ans" aria-label="შენი პასუხი"></div><div class="bank">${ex.tiles.map((t,k)=>`<button class="tile" data-tile="${k}">${esc(t)}</button>`).join('')}</div>`;
       L.answer = []; break;
@@ -886,7 +927,7 @@ function renderEx(){
         <div class="opts">${ex.right.map((w,k)=>`<button class="opt" data-mr="${k}">${esc(w.ka)}</button>`).join('')}</div></div>`; break;
   }
   $('#app').innerHTML = `<div class="player">${headerHTML()}<div class="combo" id="combo"></div><main class="wrap p-body">${body}</main>
-    <div class="sheet" id="sheet"><div class="wrap">${ex.type==='match' ? '<p class="hint" style="margin:0;text-align:center">შეეხე ინგლისურ სიტყვას, მერე მის თარგმანს.</p>' : ex.type==='speak' ? `<button class="cta ghost" id="nospeak">${micBroken ? 'გამოტოვება' : 'ახლა ვერ ვლაპარაკობ'}</button>` : '<button class="cta" id="check" disabled>შემოწმება</button>'}</div></div></div>`;
+    <div class="sheet" id="sheet"><div class="wrap">${ex.type==='match' ? `<p class="hint" style="margin:0;text-align:center">შეეხე ${LG().obj} სიტყვას, მერე მის თარგმანს.</p>` : ex.type==='speak' ? `<button class="cta ghost" id="nospeak">${micBroken ? 'გამოტოვება' : 'ახლა ვერ ვლაპარაკობ'}</button>` : '<button class="cta" id="check" disabled>შემოწმება</button>'}</div></div></div>`;
   if (canSpeak && ['listen','build_listen','pick_ka'].includes(ex.type)) setTimeout(()=>say(it.en), 300);
   const ti = $('#typein'); if (ti){ ti.focus(); ti.addEventListener('input', ()=>{ L.answer = ti.value; $('#check').disabled = !ti.value.trim(); }); }
 }
@@ -1010,14 +1051,19 @@ async function sendSpeech(blob){
   if (!L || !L.ex || L.ex.type !== 'speak') return;
   if (blob.size < 1200){ setMic('idle', 'ვერაფერი გავიგე. სცადე ისევ, ცოტა ხმამაღლა.'); return; }
   try {
-    const r = await fetch('/api/stt', {method:'POST', headers:{'Content-Type': blob.type, 'X-Init-Data': tg ? tg.initData : ''}, body: blob});
+    const r = await fetch('/api/stt', {method:'POST', headers:{'Content-Type': blob.type, 'X-Init-Data': tg ? tg.initData : '', 'X-Lang': LANG}, body: blob});
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
     speechResult(String(j.text || ''));
   } catch(e) { setMic('idle', 'შემოწმება ვერ მოხერხდა. სცადე ისევ ან გამოტოვე.'); }
 }
 const NUMW = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve'];
+const NUMW_DE = ['null','eins','zwei','drei','vier','fuenf','sechs','sieben','acht','neun','zehn','elf','zwoelf'];
 function speechWords(s){
+  if (LANG !== 'en') {
+    const nw = LANG === 'de' ? NUMW_DE : [];
+    return fold(s).replace(/[’`']/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').split(' ').filter(Boolean).map(w => /^\d+$/.test(w) && nw[+w] ? nw[+w] : w);
+  }
   s = ' ' + s.toLowerCase().replace(/[’`]/g, "'") + ' ';
   s = s.replace(/\bcan't\b/g,'can not').replace(/\bwon't\b/g,'will not').replace(/\bcannot\b/g,'can not')
        .replace(/n't\b/g,' not').replace(/'re\b/g,' are').replace(/'m\b/g,' am').replace(/'ll\b/g,' will')

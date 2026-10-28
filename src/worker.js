@@ -20,6 +20,13 @@ const MAX_AUDIO = 3 * 1024 * 1024;
 const TIERS = ['ბრინჯაო', 'ვერცხლი', 'ოქრო', 'პლატინა', 'ალმასი', 'ოსტატი', 'ლეგენდა'];
 const DIVS = ['III', 'II', 'I'];
 const LEVELS = [[0, 'A1'], [20, 'A2'], [45, 'B1'], [75, 'B2']];
+// ენები: ყოველ ენას ცალკე პროგრესი, რანკი და ცხრილი აქვს
+const LANGS = {
+  en: { name: 'English', ka: 'ინგლისური', kaAdv: 'ინგლისურად', flag: '🇬🇧', teacher: 'Mr. Ben', stt: 'en', tts: 'en' },
+  de: { name: 'German', ka: 'გერმანული', kaAdv: 'გერმანულად', flag: '🇩🇪', teacher: 'Herr Ben', stt: 'de', tts: null },
+};
+const langOf = v => (LANGS[v] ? v : 'en');
+const reqLang = request => langOf(request.headers.get('X-Lang') || new URL(request.url).searchParams.get('lang'));
 const VOICES = ['alloy', 'nova', 'onyx', 'echo', 'shimmer', 'fable', 'sage', 'coral', 'ash'];
 
 // ====================== STORE (Durable Object, SQLite) ======================
@@ -38,6 +45,20 @@ export class GokskiStore extends DurableObject {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS kv(k TEXT PRIMARY KEY, v TEXT)`);
     // v4: როდის შემოვიდა და ბოლოს როდის გამოჩნდა
     for (const col of ['joined', 'seen']) { try { this.sql.exec(`ALTER TABLE users ADD COLUMN ${col} INTEGER DEFAULT 0`); } catch (e) {} }
+    // v5: ენები — users.lang = ბოლოს არჩეული ენა; progress = თითო ენის ცალკე პროგრესი
+    try { this.sql.exec(`ALTER TABLE users ADD COLUMN lang TEXT DEFAULT 'en'`); } catch (e) {}
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS progress(
+      user_id INTEGER, lang TEXT, xp INTEGER DEFAULT 0, streak INTEGER DEFAULT 0, last_day TEXT DEFAULT '', unit INTEGER DEFAULT 0,
+      tier INTEGER DEFAULT 0, div INTEGER DEFAULT 0, rp INTEGER DEFAULT 0,
+      wk TEXT DEFAULT '', wk_xp INTEGER DEFAULT 0, wk_les INTEGER DEFAULT 0, pwk_xp INTEGER DEFAULT 0, updated INTEGER DEFAULT 0,
+      PRIMARY KEY(user_id, lang))`);
+    if (this.kvGet('mig_lang') !== '1') {
+      // არსებული (ინგლისურის) პროგრესი გადადის ენების ცხრილში, არაფერი იკარგება
+      this.sql.exec(`INSERT OR IGNORE INTO progress(user_id, lang, xp, streak, last_day, unit, tier, div, rp, wk, wk_xp, wk_les, pwk_xp, updated)
+        SELECT id, 'en', xp, streak, last_day, unit, tier, div, rp, wk, wk_xp, wk_les, pwk_xp, updated FROM users
+        WHERE updated > 0 AND (xp > 0 OR tier > 0 OR rp > 0 OR last_day != '')`);
+      this.kvSet('mig_lang', '1');
+    }
   }
   // აბრუნებს true-ს, თუ მომხმარებელი ახალია
   touch(id, name, username) {
@@ -57,19 +78,25 @@ export class GokskiStore extends DurableObject {
       today: one([`SELECT COUNT(*) n FROM users WHERE last_day = ?`, now.today]),
       week: one([`SELECT COUNT(*) n FROM users WHERE wk = ? AND wk_xp > 0`, now.wk]),
       fresh: one([`SELECT COUNT(*) n FROM users WHERE joined >= ?`, weekStart]),
-      rows: this.sql.exec(`SELECT id, name, username, xp, streak, last_day, unit, tier, div, rp, wk, wk_xp, started, joined,
+      rows: this.sql.exec(`SELECT id, name, username, xp, streak, last_day, unit, tier, div, rp, wk, wk_xp, started, joined, lang,
         MAX(seen, updated) last FROM users ORDER BY last DESC LIMIT 30`).toArray(),
     };
   }
   markStarted(id) { this.sql.exec(`UPDATE users SET started = 1 WHERE id = ?`, id); }
   progress(id, p) {
     this.touch(id, p.name, p.username);
-    const cur = this.sql.exec(`SELECT wk, wk_xp FROM users WHERE id = ?`, id).toArray()[0] || {};
-    const pwk = cur.wk && cur.wk !== p.wk ? cur.wk_xp : null;
+    const lang = langOf(p.lang), now = Date.now();
+    const cur = this.sql.exec(`SELECT wk, wk_xp, pwk_xp FROM progress WHERE user_id = ? AND lang = ?`, id, lang).toArray()[0] || {};
+    const pwk = cur.wk && cur.wk !== p.wk ? cur.wk_xp : (cur.pwk_xp || 0);
+    const vals = [int(p.xp), int(p.streak), String(p.lastDay || ''), int(p.unit), int(p.tier), int(p.div), int(p.rp), String(p.wk || ''), int(p.wkXp), int(p.wkLes), pwk, now];
+    this.sql.exec(`INSERT INTO progress(user_id, lang, xp, streak, last_day, unit, tier, div, rp, wk, wk_xp, wk_les, pwk_xp, updated)
+      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(user_id, lang) DO UPDATE SET xp = excluded.xp, streak = excluded.streak, last_day = excluded.last_day, unit = excluded.unit,
+        tier = excluded.tier, div = excluded.div, rp = excluded.rp, wk = excluded.wk, wk_xp = excluded.wk_xp, wk_les = excluded.wk_les,
+        pwk_xp = excluded.pwk_xp, updated = excluded.updated`, id, lang, ...vals);
+    // users-ის სტრიქონი = ბოლოს გამოყენებული ენის სარკე (ბოტი, შეხსენება, ადმინი)
     this.sql.exec(`UPDATE users SET xp = ?, streak = ?, last_day = ?, unit = ?, tier = ?, div = ?, rp = ?,
-      wk = ?, wk_xp = ?, wk_les = ?, pwk_xp = COALESCE(?, pwk_xp), updated = ? WHERE id = ?`,
-      int(p.xp), int(p.streak), String(p.lastDay || ''), int(p.unit), int(p.tier), int(p.div), int(p.rp),
-      String(p.wk || ''), int(p.wkXp), int(p.wkLes), pwk, Date.now(), id);
+      wk = ?, wk_xp = ?, wk_les = ?, pwk_xp = ?, updated = ?, lang = ? WHERE id = ?`, ...vals, lang, id);
     if (p.remind !== undefined) this.setRemind(id, p.remind ? 1 : 0, p.remindHour);
     return this.user(id);
   }
@@ -80,12 +107,18 @@ export class GokskiStore extends DurableObject {
   }
   user(id) {
     const r = this.sql.exec(`SELECT id, name, username, xp, streak, last_day, unit, tier, div, rp, wk, wk_xp, wk_les, pwk_xp,
-      remind, remind_hour, started FROM users WHERE id = ?`, id).toArray()[0];
+      remind, remind_hour, started, lang FROM users WHERE id = ?`, id).toArray()[0];
     return r || null;
   }
-  board() {
-    return this.sql.exec(`SELECT id, name, xp, streak, tier, div, rp, wk, wk_xp, unit FROM users
-      WHERE updated > 0 AND (xp > 0 OR tier > 0 OR rp > 0) ORDER BY tier DESC, div DESC, rp DESC, xp DESC LIMIT 100`).toArray();
+  langs(id) {
+    return this.sql.exec(`SELECT lang, xp, streak, last_day, unit, tier, div, rp, wk, wk_xp, wk_les, pwk_xp FROM progress
+      WHERE user_id = ? AND (xp > 0 OR tier > 0 OR rp > 0) ORDER BY updated DESC`, id).toArray();
+  }
+  setLang(id, lang) { this.sql.exec(`UPDATE users SET lang = ? WHERE id = ?`, langOf(lang), id); }
+  board(lang) {
+    return this.sql.exec(`SELECT u.id id, u.name name, p.xp xp, p.streak streak, p.tier tier, p.div div, p.rp rp, p.wk wk, p.wk_xp wk_xp, p.unit unit
+      FROM progress p JOIN users u ON u.id = p.user_id
+      WHERE p.lang = ? AND p.updated > 0 AND (p.xp > 0 OR p.tier > 0 OR p.rp > 0) ORDER BY p.tier DESC, p.div DESC, p.rp DESC, p.xp DESC LIMIT 100`, langOf(lang)).toArray();
   }
   getChat(id) {
     const r = this.sql.exec(`SELECT chat FROM users WHERE id = ?`, id).toArray()[0];
@@ -104,8 +137,12 @@ export class GokskiStore extends DurableObject {
   due(now) {
     const out = [];
     const rows = this.sql.exec(`SELECT * FROM users WHERE started = 1`).toArray();
+    const all = {};
+    for (const r of this.sql.exec(`SELECT * FROM progress`).toArray()) (all[r.user_id] = all[r.user_id] || []).push(r);
     for (const u of rows) {
-      const doneToday = u.last_day === now.today;
+      const ls = all[u.id] || [];
+      const doneToday = u.last_day === now.today || ls.some(r => r.last_day === now.today);
+      u.streak = Math.max(u.streak || 0, ...ls.map(r => r.streak || 0));
       if (u.remind && !doneToday && now.hour === u.remind_hour && u.reminded !== now.today) {
         out.push({ kind: 'evening', u });
         this.sql.exec(`UPDATE users SET reminded = ? WHERE id = ?`, now.today, u.id);
@@ -113,8 +150,9 @@ export class GokskiStore extends DurableObject {
         out.push({ kind: 'late', u });
         this.sql.exec(`UPDATE users SET reminded2 = ? WHERE id = ?`, now.today, u.id);
       }
-      if (now.dow === 0 && now.hour === 21 && u.reported !== now.wk && u.wk === now.wk && u.wk_xp > 0) {
-        out.push({ kind: 'weekly', u });
+      const wl = ls.filter(r => r.wk === now.wk && r.wk_xp > 0);
+      if (now.dow === 0 && now.hour === 21 && u.reported !== now.wk && (wl.length || (u.wk === now.wk && u.wk_xp > 0))) {
+        out.push({ kind: 'weekly', u, ls: wl.length ? wl : [Object.assign({ lang: u.lang || 'en' }, u)] });
         this.sql.exec(`UPDATE users SET reported = ? WHERE id = ?`, now.wk, u.id);
       }
       // ძველი კვოტის ჩანაწერების გასუფთავება
@@ -141,7 +179,7 @@ export default {
       if (p === '/api/tts') return await apiTts(request, env, ctx, auth);
       if (p === '/api/chat') return await apiChat(request, env, auth);
       if (p === '/api/progress') return await apiProgress(request, env, ctx, auth, url.origin);
-      if (p === '/api/board') return await apiBoard(env, auth);
+      if (p === '/api/board') return await apiBoard(request, env, auth);
       return json({ error: 'Not found' }, 404);
     } catch (e) {
       console.error(e);
@@ -197,15 +235,15 @@ async function apiStt(request, env, auth) {
   const audio = await request.arrayBuffer();
   if (!audio.byteLength) return json({ error: 'Empty audio' }, 400);
   if (audio.byteLength > MAX_AUDIO) return json({ error: 'Recording is too long' }, 413);
-  return json({ text: await transcribe(env, audio, type) });
+  return json({ text: await transcribe(env, audio, type, reqLang(request)) });
 }
-async function transcribe(env, audio, type) {
+async function transcribe(env, audio, type, lang = 'en') {
   if (env.OPENAI_API_KEY) {
     const ext = type.includes('mp4') || type.includes('m4a') ? 'mp4' : type.includes('ogg') || type.includes('oga') ? 'ogg' : type.includes('wav') ? 'wav' : type.includes('mpeg') ? 'mp3' : 'webm';
     const form = new FormData();
     form.append('file', new Blob([audio], { type }), `speech.${ext}`);
     form.append('model', env.STT_MODEL || 'whisper-1');
-    form.append('language', 'en');
+    form.append('language', LANGS[langOf(lang)].stt);
     const r = await fetch(`${openaiBase(env)}/audio/transcriptions`, { method: 'POST', headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}` }, body: form });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error((d.error && d.error.message) || `OpenAI ${r.status}`);
@@ -224,6 +262,7 @@ async function apiTts(request, env, ctx, auth) {
   const text = String(body.text || '').trim().slice(0, 400);
   if (!text) return json({ error: 'Empty text' }, 400);
   const voice = VOICES.includes(body.voice) ? body.voice : 'nova';
+  const lang = langOf(body.lang);
   const speed = body.slow === true || body.slow === '1' ? 0.72 : 1;
   const cache = caches.default;
   const key = new Request(`https://tts.gokski.cache/${await sha(`${env.TTS_MODEL || 'tts-1'}|${voice}|${speed}|${text}`)}`);
@@ -240,8 +279,8 @@ async function apiTts(request, env, ctx, auth) {
     });
     if (!r.ok) return json({ error: `OpenAI ${r.status}` }, 502);
     audio = await r.arrayBuffer();
-  } else if (env.AI) {
-    const res = await env.AI.run('@cf/myshell-ai/melotts', { prompt: text, lang: 'en' });
+  } else if (env.AI && LANGS[lang].tts) {
+    const res = await env.AI.run('@cf/myshell-ai/melotts', { prompt: text, lang: LANGS[lang].tts });
     if (res && res.audio) audio = Uint8Array.from(atob(res.audio), c => c.charCodeAt(0)).buffer;
   }
   if (!audio) return json({ error: 'Voice service is not configured' }, 501);
@@ -260,18 +299,20 @@ async function apiChat(request, env, auth) {
   const level = String(sc.level || 'A1');
   const tasks = (sc.tasks || []).map((t, i) => `${i}. ${t}`).join('\n') || '(none — free conversation)';
   const userTurns = msgs.filter(m => m.role === 'user').length;
-  const system = `You are role-playing to help a Georgian speaker practise spoken English.
-ROLE: ${String(sc.role || 'a friendly English teacher').slice(0, 300)}
+  const LG = LANGS[langOf(sc.lang || request.headers.get('X-Lang'))], TL = LG.name;
+  const system = `You are role-playing to help a Georgian speaker practise spoken ${TL}.
+TARGET LANGUAGE: ${TL}. Always speak ${TL} in "reply" (never switch to another language, even if the learner does).
+ROLE: ${String(sc.role || `a friendly ${TL} teacher`).slice(0, 300)}
 SCENE: ${String(sc.setting || '').slice(0, 400)}
 LEARNER LEVEL: ${level} (CEFR). The learner is a native Georgian speaker who works in IT.
 LEARNER TASKS (indexes):
 ${tasks}
 
 Rules:
-- Stay in character. Speak natural English suited to the level: A1 = very short simple sentences (max 10 words each); A2 = short sentences; B1 = everyday natural English; B2 = natural, fluent English with some idioms.
+- Stay in character. Speak natural ${TL} suited to the level: A1 = very short simple sentences (max 10 words each); A2 = short sentences; B1 = everyday natural ${TL}; B2 = natural, fluent ${TL} with some idioms.${TL === 'German' ? '\n- Use "Sie" in formal roles (shop, hotel, doctor, interview, client) and "du" with friends and colleagues.' : ''}
 - Reply with 1-3 sentences and usually end with a question so the learner keeps talking. Never answer for the learner.
 - The learner's messages come from speech recognition: ignore punctuation, capital letters and small transcription glitches.
-- Look only at the learner's LAST message. If it has a real grammar or word-choice mistake, give the corrected sentence and a short explanation in Georgian. If it is acceptable, correction must be null. Never correct the very first opening when there is no learner message.
+- Look only at the learner's LAST message. If it has a real grammar or word-choice mistake in ${TL} (or the learner used another language), give the corrected ${TL} sentence and a short explanation in Georgian. If it is acceptable, correction must be null. Never correct the very first opening when there is no learner message.
 - "done": indexes of tasks the learner has clearly completed in the whole conversation so far.
 - "finished": true when all tasks are done, or the learner has spoken ${sc.tasks && sc.tasks.length ? 10 : 8} times (now: ${userTurns}). When finished, say a friendly closing line.
 - "hint_ka": one short Georgian tip about what the learner could say next (or "" when finished).
@@ -324,15 +365,15 @@ async function apiProgress(request, env, ctx, auth, origin) {
   const row = await st.progress(u.id, {
     name: displayName(u), username: u.username || '',
     xp: b.xp, streak: b.streak, lastDay: b.lastDay, unit: b.unit, tier: b.tier, div: b.div, rp: b.rp,
-    wk: b.wk, wkXp: b.wkXp, wkLes: b.wkLes,
+    wk: b.wk, wkXp: b.wkXp, wkLes: b.wkLes, lang: langOf(b.lang || request.headers.get('X-Lang')),
     remind: typeof b.remind === 'boolean' ? b.remind : undefined, remindHour: Number.isInteger(b.remindHour) ? b.remindHour : undefined,
   });
   ctx.waitUntil(ensureSetup(env, origin).catch(err => console.error('setup', err)));
   return json({ ok: true, remind: !!row.remind, remindHour: row.remind_hour, started: !!row.started });
 }
-async function apiBoard(env, auth) {
+async function apiBoard(request, env, auth) {
   const e = requireUser(auth); if (e) return e;
-  const rows = await store(env).board();
+  const rows = await store(env).board(reqLang(request));
   return json({ me: auth.user.id, rows: rows.map(r => ({ me: r.id === auth.user.id, name: r.name || 'მოსწავლე', xp: r.xp, streak: r.streak, t: r.tier, d: r.div, rp: r.rp, wk: r.wk, wkXp: r.wk_xp, unit: r.unit })) });
 }
 function displayName(u) {
@@ -351,7 +392,7 @@ async function hookSecret(env) { return (await sha(`gokski|${env.TELEGRAM_BOT_TO
 async function ensureSetup(env, origin) {
   if (!env.TELEGRAM_BOT_TOKEN || !origin) return;
   const st = store(env);
-  const want = `${origin}|v3`;
+  const want = `${origin}|v4`;
   if ((await st.kvGet('setup')) === want) return;
   const hook = await tgCall(env, 'setWebhook', { url: `${origin}/api/tg`, secret_token: await hookSecret(env), allowed_updates: ['message'] });
   if (!hook.ok) throw new Error('setWebhook failed: ' + JSON.stringify(hook));
@@ -359,7 +400,8 @@ async function ensureSetup(env, origin) {
     { command: 'start', description: 'Gokski-ს გახსნა' },
     { command: 'stats', description: 'ჩემი პროგრესი და რანკი' },
     { command: 'remind', description: 'შეხსენება: ჩართვა/გამორთვა, მაგ. /remind 21' },
-    { command: 'reset', description: 'Mr. Ben-თან საუბრის თავიდან დაწყება' },
+    { command: 'reset', description: 'მასწავლებელთან საუბრის თავიდან დაწყება' },
+    { command: 'lang', description: 'ენის შეცვლა ბოტში: /lang en ან /lang de' },
   ] });
   await tgCall(env, 'setChatMenuButton', { menu_button: { type: 'web_app', text: 'Gokski', web_app: { url: origin } } });
   await st.kvSet('origin', origin);
@@ -387,13 +429,20 @@ async function handleUpdate(env, update) {
   const openBtn = origin ? { reply_markup: { inline_keyboard: [[{ text: '📚 Gokski-ს გახსნა', web_app: { url: origin } }]] } } : {};
   const text = (m.text || '').trim();
 
+  const me = await st.user(id), LG = LANGS[langOf(me && me.lang)];
   if (text.startsWith('/start')) {
-    return say('👋 გამარჯობა! მე ვარ Mr. Ben, შენი ინგლისურის მასწავლებელი.\n\n📚 გაკვეთილები, რანკი და AI საუბარი Gokski-შია — ღილაკი ქვემოთაა.\n💬 აქვე შეგიძლია მომწერო ან ხმოვანი გამომიგზავნო ინგლისურად: გაგისწორებ და აგიხსნი ქართულად.\n⏰ ყოველ საღამოს შეგახსენებ ვარჯიშს (/remind — გამორთვა ან დროის შეცვლა).', openBtn);
+    return say(`👋 გამარჯობა! Gokski-ში შეგიძლია ისწავლო ინგლისური 🇬🇧 და გერმანული 🇩🇪 — თითოეულს ცალკე პროგრესი, რანკი და streak აქვს.\n\n📚 გაკვეთილები, რანკი და AI საუბარი აპშია — ღილაკი ქვემოთაა.\n💬 აქვე შეგიძლია მომწერო ან ხმოვანი გამომიგზავნო ${LG.kaAdv} (${LG.teacher}): გაგისწორებ და აგიხსნი ქართულად. ენის შეცვლა: /lang\n⏰ ყოველ საღამოს შეგახსენებ ვარჯიშს (/remind — გამორთვა ან დროის შეცვლა).`, openBtn);
   }
   if (text.startsWith('/stats')) {
-    const u = await st.user(id);
-    if (!u || (!u.xp && !u.tier && !u.rp)) return say('ჯერ Gokski-ში ერთი გაკვეთილი გაიარე და აქ შენს პროგრესს ნახავ 🙂', openBtn);
-    return say(statsText(u), openBtn);
+    const ls = await st.langs(id);
+    if (!ls.length) return say('ჯერ Gokski-ში ერთი გაკვეთილი გაიარე და აქ შენს პროგრესს ნახავ 🙂', openBtn);
+    return say(statsText(me, ls), openBtn);
+  }
+  if (text.startsWith('/lang')) {
+    const arg = (text.split(/\s+/)[1] || '').toLowerCase();
+    const l = LANGS[arg] ? arg : (langOf(me && me.lang) === 'en' ? 'de' : 'en');
+    await st.setLang(id, l); await st.setChat(id, []);
+    return say(`${LANGS[l].flag} ბოტში ახლა ${LANGS[l].kaAdv} ვსაუბრობთ — ${LANGS[l].teacher} გისმენს. (აპში ენა ზედა დროშით იცვლება.)`);
   }
   if (text.startsWith('/remind')) {
     const arg = text.split(/\s+/)[1];
@@ -412,7 +461,7 @@ async function handleUpdate(env, update) {
     if (!isAdmin(env, id)) return say('ეს ბრძანება მხოლოდ ბოტის მფლობელისთვისაა.');
     return say(adminText(await st.adminStats(tbilisi()), text.startsWith('/users')));
   }
-  if (text.startsWith('/')) return say('ბრძანებები: /start, /stats, /remind, /reset');
+  if (text.startsWith('/')) return say('ბრძანებები: /start, /stats, /lang, /remind, /reset');
 
   let input = text, heard = '';
   if (!input && (m.voice || m.audio)) {
@@ -421,30 +470,30 @@ async function handleUpdate(env, update) {
     const info = await tgCall(env, 'getFile', { file_id: f.file_id });
     if (!info.ok) return say('ხმოვანი ვერ ჩამოვტვირთე 😕');
     const audio = await (await fetch(`${tgBase(env)}/file/bot${env.TELEGRAM_BOT_TOKEN}/${info.result.file_path}`)).arrayBuffer();
-    try { heard = await transcribe(env, audio, f.mime_type || 'audio/ogg'); } catch (e) { return say('ხმის ამოცნობა ვერ მოხერხდა: ' + e.message); }
+    try { heard = await transcribe(env, audio, f.mime_type || 'audio/ogg', langOf(me && me.lang)); } catch (e) { return say('ხმის ამოცნობა ვერ მოხერხდა: ' + e.message); }
     input = heard;
     if (!input.trim()) return say('ვერაფერი გავიგე, სცადე ისევ 🙂');
   }
   if (!input) return;
   if (!(await st.quota(id, tbilisi().today, DAILY_AI_LIMIT))) return say('დღევანდელი ლიმიტი ამოიწურა, ხვალ გავაგრძელოთ 🙂');
   await tgCall(env, 'sendChatAction', { chat_id: m.chat.id, action: 'typing' });
-  const u = await st.user(id);
-  const reply = await tutorReply(env, st, id, heard ? `(voice message, transcribed — ignore punctuation): ${input}` : input, levelCode(u ? u.unit : 0));
+  const reply = await tutorReply(env, st, id, heard ? `(voice message, transcribed — ignore punctuation): ${input}` : input, levelCode(me ? me.unit : 0), langOf(me && me.lang));
   return say((heard ? `🎤 გავიგე: „${heard}"\n\n` : '') + reply);
 }
 
-async function tutorReply(env, st, id, input, level) {
+async function tutorReply(env, st, id, input, level, lang = 'en') {
   const history = await st.getChat(id);
-  const system = `You are "Mr. Ben", a kind, patient personal English teacher for a Georgian-speaking adult at ${level} level who works in IT and AI.
-- Explain grammar and meanings in GEORGIAN. Use English suited to ${level} for practice sentences.
-- If the student writes English with mistakes, first show:
+  const LG = LANGS[langOf(lang)], TL = LG.name;
+  const system = `You are "${LG.teacher}", a kind, patient personal ${TL} teacher for a Georgian-speaking adult at ${level} level who works in IT and AI.
+- Explain grammar and meanings in GEORGIAN. Use ${TL} suited to ${level} for practice sentences.
+- If the student writes ${TL} with mistakes, first show:
 ✏️ შენ დაწერე: <their sentence>
 ✅ სწორია: <corrected sentence>
 💡 <one short explanation in Georgian>
 Then continue the conversation.
-- If the student writes in Georgian, help them say it in English and ask them to try it themselves.
+- If the student writes in Georgian (or another language), help them say it in ${TL} and ask them to try it themselves.
 - Keep answers short (max ~8 lines), plain text without Markdown. Be encouraging.
-- Always end with ONE question in English to keep the student practising.`;
+- Always end with ONE question in ${TL} to keep the student practising.`;
   const msgs = [...history, { role: 'user', content: input }];
   let answer = '';
   if (env.OPENAI_API_KEY) {
@@ -482,7 +531,7 @@ function ago(ms) {
 function adminText(a, full) {
   const head = `📊 Gokski — სტატისტიკა\n👥 სულ მომხმარებელი: ${a.total} (ბოტი დაიწყო: ${a.started})\n🟢 დღეს ივარჯიშა: ${a.today}\n📅 ამ კვირაში აქტიური: ${a.week}\n🆕 ახალი ამ კვირაში: ${a.fresh}`;
   const rows = (full ? a.rows : a.rows.slice(0, 10)).map((u, i) =>
-    `${i + 1}. ${u.name || 'უსახელო'}${u.username ? ' @' + u.username : ''}\n   ნაწილი ${(u.unit || 0) + 1} · ${rankName(u)} · ${u.xp} XP · 🔥${u.streak} · ${ago(u.last)}`);
+    `${i + 1}. ${u.name || 'უსახელო'}${u.username ? ' @' + u.username : ''}\n   ${(LANGS[u.lang] || LANGS.en).flag} ნაწილი ${(u.unit || 0) + 1} · ${rankName(u)} · ${u.xp} XP · 🔥${u.streak} · ${ago(u.last)}`);
   return `${head}\n\n${full ? 'ბოლოს აქტიურები (30):' : 'ბოლოს აქტიურები (10) — ყველა: /users'}\n${rows.join('\n') || '—'}`.slice(0, 4000);
 }
 
@@ -495,7 +544,8 @@ async function cron(env) {
   const now = tbilisi();
   const jobs = await st.due(now);
   const btn = origin ? { reply_markup: { inline_keyboard: [[{ text: '📚 Gokski-ს გახსნა', web_app: { url: origin } }]] } } : {};
-  for (const { kind, u } of jobs) {
+  for (const job of jobs) {
+    const { kind, u } = job;
     const first = (u.name || '').split(' ')[0] || '';
     let text = '';
     if (kind === 'evening') text = u.streak > 0
@@ -503,8 +553,12 @@ async function cron(env) {
       : `📚 ${first}, დღეს ჯერ არ გისწავლია. ერთი გაკვეთილი 5 წუთია — დავიწყოთ?`;
     else if (kind === 'late') text = `⏰ ${u.streak} დღიანი streak იწვის! შუაღამემდე ცოტა დრო დაგრჩა.`;
     else if (kind === 'weekly') {
-      const diff = u.pwk_xp ? Math.round((u.wk_xp - u.pwk_xp) / u.pwk_xp * 100) : null;
-      text = `📊 კვირის შედეგი\n⚡ ${u.wk_xp} XP${diff !== null ? ` (${diff >= 0 ? '+' : ''}${diff}% წინა კვირასთან)` : ''}\n📘 ${u.wk_les} გაკვეთილი\n🏆 ${rankName(u)}\n🔥 streak: ${u.streak}\n\nახალი კვირა, ახალი რეკორდი! 💪`;
+      const parts = job.ls.map(r => {
+        const diff = r.pwk_xp ? Math.round((r.wk_xp - r.pwk_xp) / r.pwk_xp * 100) : null;
+        const L = LANGS[langOf(r.lang)];
+        return `${L.flag} ${L.ka}\n⚡ ${r.wk_xp} XP${diff !== null ? ` (${diff >= 0 ? '+' : ''}${diff}% წინა კვირასთან)` : ''}\n📘 ${r.wk_les} გაკვეთილი\n🏆 ${rankName(r)}\n🔥 streak: ${r.streak}`;
+      });
+      text = `📊 კვირის შედეგი\n\n${parts.join('\n\n')}\n\nახალი კვირა, ახალი რეკორდი! 💪`;
     }
     if (text) await tgCall(env, 'sendMessage', { chat_id: u.id, text, ...btn });
   }
@@ -548,8 +602,11 @@ function tbilisi() {
 }
 function rankName(u) { return u.tier >= 6 ? `ლეგენდა · ${u.rp} LP` : `${TIERS[u.tier] || TIERS[0]} ${DIVS[u.div] || 'III'} · ${u.rp} RP`; }
 function levelCode(unit) { return LEVELS.filter(l => (unit || 0) >= l[0]).pop()[1]; }
-function statsText(u) {
-  return `🏆 რანკი: ${rankName(u)}\n⚡ XP: ${u.xp} (ამ კვირაში ${u.wk_xp})\n🔥 streak: ${u.streak}\n📍 ნაწილი ${(u.unit || 0) + 1} · ${levelCode(u.unit)}\n⏰ შეხსენება: ${u.remind ? `${u.remind_hour}:00` : 'გამორთულია'}`;
+function statsText(u, ls) {
+  const wk = tbilisi().wk;
+  const parts = ls.map(r => { const L = LANGS[langOf(r.lang)];
+    return `${L.flag} ${L.ka}\n🏆 რანკი: ${rankName(r)}\n⚡ XP: ${r.xp} (ამ კვირაში ${r.wk === wk ? r.wk_xp : 0})\n🔥 streak: ${r.streak}\n📍 ნაწილი ${(r.unit || 0) + 1} · ${levelCode(r.unit)}`; });
+  return `${parts.join('\n\n')}\n\n⏰ შეხსენება: ${u && u.remind ? `${u.remind_hour}:00` : 'გამორთულია'}`;
 }
 const int = v => (Number.isFinite(+v) ? Math.round(+v) : 0);
 function json(body, status = 200) {

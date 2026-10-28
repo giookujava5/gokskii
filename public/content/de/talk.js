@@ -1,0 +1,462 @@
+// Gokski — გერმანული AI საუბრის სცენარები. tasks: [ქართულად, ინგლისურად მოდელისთვის]
+window.TALKS_DE = [
+ {
+  "id": "free",
+  "lvl": "",
+  "title": "თავისუფალი საუბარი",
+  "en": "Freies Gespräch mit Herrn Ben",
+  "icon": "💬",
+  "role": "Herr Ben, a friendly German teacher who chats with the learner about their day, work and hobbies",
+  "setting": "A relaxed chat. Ask about the learner's day, job (IT and AI), plans and interests.",
+  "goal": "ესაუბრე Herr Ben-ს ნებისმიერ თემაზე. 8 რეპლიკის შემდეგ საუბარი შეჯამდება.",
+  "tasks": []
+ },
+ {
+  "id": "cafe",
+  "lvl": "A1",
+  "title": "კაფეში",
+  "en": "Im Café",
+  "icon": "☕",
+  "role": "a friendly barista at a coffee shop in Tbilisi",
+  "setting": "The learner is a customer at the counter. Start by greeting them and asking what they would like.",
+  "goal": "შეუკვეთე სასმელი და საჭმელი, გაიგე ფასი და გადაიხადე.",
+  "tasks": [
+   [
+    "შეუკვეთე სასმელი",
+    "Order a drink"
+   ],
+   [
+    "შეუკვეთე საჭმელი",
+    "Order something to eat"
+   ],
+   [
+    "იკითხე ფასი",
+    "Ask how much it costs"
+   ],
+   [
+    "თქვი, როგორ გადაიხდი",
+    "Say how they will pay (Karte oder bar)"
+   ]
+  ]
+ },
+ {
+  "id": "meet",
+  "lvl": "A1",
+  "title": "ახალი კოლეგა",
+  "en": "Eine neue Kollegin",
+  "icon": "🤝",
+  "role": "Sarah, a new colleague from Berlin who just joined the office",
+  "setting": "First day at work. Sarah introduces herself and wants to get to know the learner.",
+  "goal": "გაეცანი სარას: თქვი შენი სახელი, საიდან ხარ, რას საქმიანობ და ჰკითხე მას რამე.",
+  "tasks": [
+   [
+    "თქვი შენი სახელი",
+    "Say their name"
+   ],
+   [
+    "თქვი, საიდან ხარ",
+    "Say where they are from"
+   ],
+   [
+    "თქვი, რას საქმიანობ",
+    "Say what their job is"
+   ],
+   [
+    "დაუსვი სარას კითხვა",
+    "Ask Sarah a question about herself"
+   ]
+  ]
+ },
+ {
+  "id": "shop",
+  "lvl": "A1",
+  "title": "ტანსაცმლის მაღაზიაში",
+  "en": "Kleidung kaufen",
+  "icon": "👕",
+  "role": "a shop assistant in a clothes shop",
+  "setting": "The learner is looking for a jacket. Greet them and help them.",
+  "goal": "იპოვე ქურთუკი: თქვი ზომა და ფერი, იკითხე ფასი და იყიდე.",
+  "tasks": [
+   [
+    "თქვი, რა გინდა",
+    "Say what they are looking for"
+   ],
+   [
+    "თქვი ზომა",
+    "Say their size"
+   ],
+   [
+    "თქვი ფერი",
+    "Say which colour they want"
+   ],
+   [
+    "იკითხე ფასი",
+    "Ask about the price"
+   ]
+  ]
+ },
+ {
+  "id": "taxi",
+  "lvl": "A1",
+  "title": "ტაქსში",
+  "en": "Im Taxi",
+  "icon": "🚕",
+  "role": "a taxi driver in Berlin who speaks only German",
+  "setting": "The learner gets into the taxi. Ask where they want to go.",
+  "goal": "უთხარი მძღოლს, სად მიდიხარ, იკითხე რამდენი ხანი დასჭირდება და რა ღირს.",
+  "tasks": [
+   [
+    "თქვი, სად მიდიხარ",
+    "Say where they want to go"
+   ],
+   [
+    "იკითხე, რამდენი ხანი დასჭირდება",
+    "Ask how long it takes"
+   ],
+   [
+    "იკითხე ფასი",
+    "Ask how much it costs"
+   ],
+   [
+    "მადლობა გადაუხადე",
+    "Thank the driver"
+   ]
+  ]
+ },
+ {
+  "id": "hotel",
+  "lvl": "A2",
+  "title": "სასტუმროში რეგისტრაცია",
+  "en": "Check-in im Hotel",
+  "icon": "🏨",
+  "role": "a hotel receptionist",
+  "setting": "The learner arrives at the hotel reception with a reservation.",
+  "goal": "გაიარე რეგისტრაცია: თქვი ჯავშნის შესახებ, გაიგე საუზმის დრო და Wi-Fi.",
+  "tasks": [
+   [
+    "თქვი, რომ ჯავშანი გაქვს",
+    "Say they have a reservation"
+   ],
+   [
+    "თქვი, რამდენ ღამეს რჩები",
+    "Say how many nights they are staying"
+   ],
+   [
+    "იკითხე საუზმის დრო",
+    "Ask what time breakfast is"
+   ],
+   [
+    "იკითხე Wi-Fi-ის პაროლი",
+    "Ask for the Wi-Fi password"
+   ]
+  ]
+ },
+ {
+  "id": "doctor",
+  "lvl": "A2",
+  "title": "ექიმთან",
+  "en": "Beim Arzt",
+  "icon": "🩺",
+  "role": "a kind family doctor",
+  "setting": "The learner has an appointment because they feel unwell. Ask what the problem is.",
+  "goal": "აუხსენი ექიმს, რა გაწუხებს, რამდენი ხანია და გაიგე, რა უნდა გააკეთო.",
+  "tasks": [
+   [
+    "თქვი, რა გტკივა",
+    "Describe their symptoms"
+   ],
+   [
+    "თქვი, როდიდან",
+    "Say how long they have felt like this"
+   ],
+   [
+    "უპასუხე ექიმის კითხვას",
+    "Answer the doctor's questions"
+   ],
+   [
+    "იკითხე, რა უნდა გააკეთო",
+    "Ask what they should do"
+   ]
+  ]
+ },
+ {
+  "id": "directions",
+  "lvl": "A2",
+  "title": "გზის კითხვა",
+  "en": "Nach dem Weg fragen",
+  "icon": "🧭",
+  "role": "a helpful local person on a street in Munich",
+  "setting": "The learner is a tourist and stops you on the street.",
+  "goal": "გაიგე, როგორ მიხვიდე მუზეუმამდე: შორსაა თუ არა და რით სჯობს წასვლა.",
+  "tasks": [
+   [
+    "თავაზიანად მიმართე",
+    "Start politely (Entschuldigung…)"
+   ],
+   [
+    "იკითხე, სად არის მუზეუმი",
+    "Ask where the museum is"
+   ],
+   [
+    "იკითხე, შორსაა თუ არა",
+    "Ask if it is far"
+   ],
+   [
+    "იკითხე ტრანსპორტზე",
+    "Ask about the bus or metro"
+   ]
+  ]
+ },
+ {
+  "id": "weekend",
+  "lvl": "A2",
+  "title": "შაბათ-კვირის გეგმები",
+  "en": "Pläne fürs Wochenende",
+  "icon": "📅",
+  "role": "Tom, the learner's German-speaking friend from Hamburg",
+  "setting": "Tom calls to ask about the weekend. Plan something together.",
+  "goal": "შეუთანხმდი ტომს: რას გააკეთებთ, რომელ დღეს, რომელ საათზე და სად შეხვდებით.",
+  "tasks": [
+   [
+    "შესთავაზე აქტივობა",
+    "Suggest an activity"
+   ],
+   [
+    "შეთანხმდით დღეზე",
+    "Agree on a day"
+   ],
+   [
+    "შეთანხმდით დროზე",
+    "Agree on a time"
+   ],
+   [
+    "შეთანხმდით ადგილზე",
+    "Agree where to meet"
+   ]
+  ]
+ },
+ {
+  "id": "interview",
+  "lvl": "B1",
+  "title": "სამსახურის გასაუბრება",
+  "en": "Vorstellungsgespräch",
+  "icon": "💼",
+  "role": "an HR manager interviewing a candidate for an IT support specialist job at an international company",
+  "setting": "A formal job interview. Ask typical interview questions one at a time.",
+  "goal": "გაიარე გასაუბრება: მოყევი შენზე, გამოცდილებაზე, ძლიერ მხარეებზე და დასვი შენი კითხვა.",
+  "tasks": [
+   [
+    "მოყევი შენ შესახებ",
+    "Introduce themselves professionally"
+   ],
+   [
+    "მოყევი გამოცდილებაზე",
+    "Describe their work experience"
+   ],
+   [
+    "თქვი შენი ძლიერი მხარე",
+    "Describe a strength with an example"
+   ],
+   [
+    "დასვი კითხვა კომპანიაზე",
+    "Ask a question about the job or company"
+   ]
+  ]
+ },
+ {
+  "id": "complaint",
+  "lvl": "B1",
+  "title": "საჩივარი მაღაზიაში",
+  "en": "Eine Reklamation",
+  "icon": "🧾",
+  "role": "a customer service assistant in an electronics shop",
+  "setting": "The learner bought a laptop last week and it already has a problem.",
+  "goal": "აუხსენი პრობლემა, თქვი როდის იყიდე და მოითხოვე შეცვლა ან თანხის დაბრუნება.",
+  "tasks": [
+   [
+    "აუხსენი პრობლემა",
+    "Explain what is wrong with the laptop"
+   ],
+   [
+    "თქვი, როდის იყიდე",
+    "Say when they bought it"
+   ],
+   [
+    "მოითხოვე გამოსავალი",
+    "Ask for a replacement or a refund"
+   ],
+   [
+    "შეთანხმდი შემდეგ ნაბიჯზე",
+    "Agree on what happens next"
+   ]
+  ]
+ },
+ {
+  "id": "itsupport",
+  "lvl": "B1",
+  "title": "IT დახმარება",
+  "en": "IT-Support am Telefon",
+  "icon": "🖥️",
+  "role": "Mark, a stressed office worker whose printer and email are not working. The LEARNER is the IT support specialist helping Mark.",
+  "setting": "Mark calls the IT helpdesk. He explains the problem badly; the learner must ask questions and guide him.",
+  "goal": "შენ IT სპეციალისტი ხარ: გაარკვიე პრობლემა, დაუსვი კითხვები და ნაბიჯ-ნაბიჯ აუხსენი გადაწყვეტა.",
+  "tasks": [
+   [
+    "იკითხე, რა მოხდა",
+    "Ask what the problem is"
+   ],
+   [
+    "დაუსვი დამაზუსტებელი კითხვა",
+    "Ask a clarifying question"
+   ],
+   [
+    "მიეცი ინსტრუქცია",
+    "Give clear step-by-step instructions"
+   ],
+   [
+    "შეამოწმე, მოგვარდა თუ არა",
+    "Check if the problem is solved"
+   ]
+  ]
+ },
+ {
+  "id": "restaurant",
+  "lvl": "B1",
+  "title": "მაგიდის დაჯავშნა",
+  "en": "Einen Tisch reservieren",
+  "icon": "📞",
+  "role": "a restaurant host answering the phone",
+  "setting": "The learner calls to book a table for a special dinner.",
+  "goal": "დაჯავშნე მაგიდა: თარიღი, დრო, ადამიანების რაოდენობა და ერთი განსაკუთრებული თხოვნა.",
+  "tasks": [
+   [
+    "თქვი თარიღი და დრო",
+    "Give the date and time"
+   ],
+   [
+    "თქვი, რამდენი ადამიანი იქნებით",
+    "Say how many people"
+   ],
+   [
+    "დაასახელე განსაკუთრებული თხოვნა",
+    "Make a special request"
+   ],
+   [
+    "დაადასტურე ჯავშანი",
+    "Confirm the booking details"
+   ]
+  ]
+ },
+ {
+  "id": "salary",
+  "lvl": "B2",
+  "title": "ხელფასზე მოლაპარაკება",
+  "en": "Gehaltsverhandlung",
+  "icon": "💰",
+  "role": "a hiring manager who has offered the learner a job but with a lower salary than they want",
+  "setting": "A negotiation call after the job offer. Be polite but push back a little.",
+  "goal": "მოილაპარაკე უკეთეს პირობებზე: დაასაბუთე, შესთავაზე კომპრომისი და დაასრულე თავაზიანად.",
+  "tasks": [
+   [
+    "მადლობა გადაუხადე შეთავაზებისთვის",
+    "Thank them for the offer"
+   ],
+   [
+    "დაასახელე სასურველი თანხა და მიზეზი",
+    "State the salary they want and justify it"
+   ],
+   [
+    "შესთავაზე კომპრომისი",
+    "Propose a compromise or other benefits"
+   ],
+   [
+    "დაასრულე თავაზიანად",
+    "Close the conversation politely"
+   ]
+  ]
+ },
+ {
+  "id": "debate",
+  "lvl": "B2",
+  "title": "დებატი: დისტანციური მუშაობა",
+  "en": "Debatte: Homeoffice",
+  "icon": "⚖️",
+  "role": "a colleague who strongly believes everyone should work from the office",
+  "setting": "A friendly debate. Disagree with the learner and challenge their arguments.",
+  "goal": "დაიცავი შენი აზრი დისტანციურ მუშაობაზე: მოიყვანე არგუმენტები და მაგალითი, უპასუხე კონტრარგუმენტს.",
+  "tasks": [
+   [
+    "გამოთქვი შენი აზრი",
+    "State their opinion clearly"
+   ],
+   [
+    "მოიყვანე ორი არგუმენტი",
+    "Give two arguments"
+   ],
+   [
+    "მოიყვანე მაგალითი",
+    "Support it with an example"
+   ],
+   [
+    "უპასუხე კონტრარგუმენტს",
+    "Respond to a counter-argument"
+   ]
+  ]
+ },
+ {
+  "id": "present",
+  "lvl": "B2",
+  "title": "პრეზენტაციის კითხვები",
+  "en": "Fragen nach der Präsentation",
+  "icon": "📊",
+  "role": "a senior manager in the audience after the learner presented a new automation project",
+  "setting": "The presentation has just ended. Ask challenging questions about cost, risks and timeline.",
+  "goal": "უპასუხე კითხვებს პროექტზე: ბიუჯეტი, რისკები, ვადები. თუ რამე არ იცი, თავაზიანად თქვი.",
+  "tasks": [
+   [
+    "უპასუხე ბიუჯეტის კითხვას",
+    "Answer the question about cost"
+   ],
+   [
+    "ახსენი რისკები",
+    "Explain the risks and how to handle them"
+   ],
+   [
+    "თქვი ვადები",
+    "Give a timeline"
+   ],
+   [
+    "შეაჯამე მთავარი სარგებელი",
+    "Summarise the main benefit"
+   ]
+  ]
+ },
+ {
+  "id": "client",
+  "lvl": "B2",
+  "title": "შეხვედრა კლიენტთან",
+  "en": "Webprojekt mit einem Kunden",
+  "icon": "🌐",
+  "role": "a small business owner who wants a new website but is unsure about the price and timeline",
+  "setting": "A first meeting. The learner is a web developer offering to build and host the website for a monthly fee.",
+  "goal": "გაიგე კლიენტის საჭიროება, აუხსენი შენი შეთავაზება (საიტი + ჰოსტინგი) და შეთანხმდით შემდეგ ნაბიჯზე.",
+  "tasks": [
+   [
+    "გაარკვიე კლიენტის საჭიროება",
+    "Ask what the client needs"
+   ],
+   [
+    "აუხსენი შეთავაზება",
+    "Explain the offer (website and hosting)"
+   ],
+   [
+    "უპასუხე ფასის შესახებ ეჭვს",
+    "Handle a concern about price"
+   ],
+   [
+    "შეთანხმდით შემდეგ ნაბიჯზე",
+    "Agree on the next step"
+   ]
+  ]
+ }
+];
