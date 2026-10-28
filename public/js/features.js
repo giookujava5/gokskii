@@ -9,8 +9,8 @@ const BOT_USER = 'gokskibot';
 // თითო ენას ცალკე აქვს: პროგრესი, XP, streak, რანკი, სიტყვების გამეორება, მიღწევები და ცხრილი.
 // ახალი ენა: აქ ჩანაწერი + index.html-ში LANGDATA და units/<lang>, content/<lang> ფაილები + worker-ის LANGS.
 const LANGS = {
-  en: { flag: '🇬🇧', ka: 'ინგლისური', adv: 'ინგლისურად', obj: 'ინგლისურ', acc: 'ინგლისურს', bcp: 'en-US', tutor: 'Mr. Ben' },
-  de: { flag: '🇩🇪', ka: 'გერმანული', adv: 'გერმანულად', obj: 'გერმანულ', acc: 'გერმანულს', bcp: 'de-DE', tutor: 'Herr Ben' },
+  en: { code: 'EN', flag: '🇬🇧', ka: 'ინგლისური', adv: 'ინგლისურად', obj: 'ინგლისურ', acc: 'ინგლისურს', bcp: 'en-US', tutor: 'Mr. Ben' },
+  de: { code: 'DE', flag: '🇩🇪', ka: 'გერმანული', adv: 'გერმანულად', obj: 'გერმანულ', acc: 'გერმანულს', bcp: 'de-DE', tutor: 'Herr Ben' },
 };
 const LANG_KEY = 'gokski-lang';
 const lsKey = l => l === 'en' ? 'gokski-v1' : `gokski-${l}-v1`;
@@ -43,7 +43,7 @@ function setLang(l) {
   L = null; T = null; LS = null;
   refreshDay(); syncServer();
   view = 'path'; render(); window.scrollTo(0, 0);
-  toast(`${LG().flag} ${first ? 'დავიწყოთ' : 'ახლა სწავლობ'}: <b>${LG().ka}</b>`, 2200);
+  toast(`<b>${LG().code}</b> · ${first ? 'დავიწყოთ' : 'ახლა სწავლობ'}: <b>${LG().ka}</b>`, 2200);
   prefetchAhead();
 }
 function langStats(l) {
@@ -55,7 +55,7 @@ function langCards(active) {
   return Object.entries(LANGS).map(([k, g]) => {
     const st = langStats(k), cur = active && k === LANG;
     const sub = st.fresh ? 'A1-დან B2-მდე · 100 ნაწილი' : `${st.rank} · ${st.xp} XP · ${st.unit} ნაწილი · 🔥${st.streak}`;
-    return `<button class="lcard" data-setlang="${k}" ${cur ? 'aria-current="true"' : ''}><span class="fl">${g.flag}</span><span><b>${g.ka}</b><small>${sub}</small></span><span class="go2">${cur ? '✓' : '›'}</span></button>`;
+    return `<button class="lcard" data-setlang="${k}" ${cur ? 'aria-current="true"' : ''}><span class="fl">${g.code}</span><span><b>${g.ka}</b><small>${sub}</small></span><span class="go2">${cur ? '✓' : '›'}</span></button>`;
   }).join('');
 }
 function renderPicker() {
@@ -827,7 +827,7 @@ function renderRank() {
   const R = S.rank, Tt = RANK_T[Math.min(R.t, LEGEND)], pct = R.t >= LEGEND ? 100 : Math.min(100, R.rp);
   const next = R.t >= LEGEND ? 'უმაღლესი რანკი' : R.promo ? 'დაწინაურების მატჩი' : R.d < 2 ? `შემდეგი: ${RANK_T[R.t].ka} ${RANK_D[R.d + 1]}` : `შემდეგი: მატჩი ${RANK_T[R.t + 1].ka}-ზე`;
   const got = ACH.filter(a => S.ach[a[0]]).length;
-  let h = topBar() + `<main class="wrap home"><h1 class="ptitle">რანკი <small style="font-size:16px;color:var(--muted);font-weight:700">${LG().flag} ${LG().ka}</small></h1>
+  let h = topBar() + `<main class="wrap home"><h1 class="ptitle">რანკი <small style="font-size:16px;color:var(--muted);font-weight:700">${LG().code} · ${LG().ka}</small></h1>
     <section class="rkcard" style="--tc:${Tt.c};--tc2:${Tt.c2}">
       <div class="rkem">${emblem(R.t, R.d, 112)}</div>
       <h2>${rankLabel()}</h2><p class="rkpts">${rankPts()}</p>
@@ -849,14 +849,14 @@ function renderRank() {
         <li><b>RP 0-ზე ქვემოთ</b> → ქვედა დივიზიონში ჩამოდიხარ 70 RP-ით.</li>
         <li><b>ოქროდან ზემოთ</b> ყოველი გამოტოვებული დღე −15 RP. streak-ის გაყინვა ამისგანაც გიცავს.</li>
       </ul></details>
-    <div class="card"><div class="cardh"><h3>ცხრილი ${LG().flag}</h3><div class="seg"><button data-seg="rank" aria-pressed="${SV.seg === 'rank'}">რანკი</button><button data-seg="week" aria-pressed="${SV.seg === 'week'}">კვირის XP</button></div></div>
+    <div class="card"><div class="cardh"><h3>ცხრილი · ${LG().code}</h3><div class="seg"><button data-seg="rank" aria-pressed="${SV.seg === 'rank'}">რანკი</button><button data-seg="week" aria-pressed="${SV.seg === 'week'}">კვირის XP</button></div></div>
       <div id="board">${boardHTML()}</div>
       ${IN_TG ? '<button class="cta ghost" data-share>მოიწვიე მეგობარი</button>' : ''}</div>
     ${weekHTML()}
     <div class="card"><div class="cardh"><h3>მიღწევები</h3><b class="cnt">${got} / ${ACH.length}</b></div>
       <div class="achs">${ACH.map(([id, ic, t, d]) => `<div class="ach ${S.ach[id] ? 'on' : ''}" title="${esc(d)}"><span>${ic}</span><b>${esc(t)}</b><small>${esc(d)}</small></div>`).join('')}</div></div>
     <div class="card"><h3>პარამეტრები</h3>
-      <div class="setrow"><span>🌐 ენა: ${LG().flag} ${LG().ka}</span><button class="cta sm ghost" data-langmenu>შეცვლა</button></div>
+      <div class="setrow"><span>🌐 ენა: ${LG().ka} (${LG().code})</span><button class="cta sm ghost" data-langmenu>შეცვლა</button></div>
       <div class="setrow"><span>❄️ streak-ის გაყინვა</span><b>${S.freeze} / 2</b></div>
       <p class="setnote">ყოველ 7 დღიან streak-ზე 1 გაყინვას იღებ. თუ დღეს გამოტოვებ, გაყინვა streak-ს და RP-ს გადაარჩენს.</p>
       ${IN_TG ? `<div class="setrow"><span>📥 ოფლაინ ხმა</span><button class="cta sm ghost" data-offdl>ჩამოტვირთვა</button></div>
