@@ -1,5 +1,5 @@
 // Gokski — Service Worker: აპი და ხმა ინახება მოწყობილობაზე, რომ ინტერნეტის გარეშეც იმუშაოს.
-const SHELL = 'gokski-shell-v7';
+const SHELL = 'gokski-shell-v8';
 const AUDIO = 'gokski-audio-v1';
 const ASSETS = ['/', '/js/features.js', '/content/talk.js', '/content/listen.js',
   '/units/a1.js', '/units/a2.js', '/units/b1.js', '/units/b2.js',

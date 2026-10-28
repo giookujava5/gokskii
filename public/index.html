@@ -429,9 +429,11 @@ main.home{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
 .q .opt{font-size:15px;padding:12px 14px}
 .chip.off{padding:5px 8px;font-size:14px;background:var(--bad-bg);box-shadow:0 0 0 1px var(--bad) inset}
 /* ---------- ენები ---------- */
-.c-lang{padding:5px 10px;font-size:14px;letter-spacing:.04em;cursor:pointer;color:var(--teal)}
+.c-lang{gap:6px;padding:5px 10px 5px 7px;font-size:14px;letter-spacing:.04em;cursor:pointer;color:var(--ink)}
+.flag{display:inline-block;width:22px;height:15px;border-radius:3px;overflow:hidden;vertical-align:-2px;box-shadow:0 0 0 1px rgba(0,0,0,.12);flex:none}
+.flag svg,.lcard .fl svg{display:block;width:100%;height:100%}
 .c-lang:active{transform:translateY(1px)}
-@media (max-width:390px){.top .wrap{gap:6px}.wm{font-size:21px}.logo svg{width:30px;height:30px}.chip{padding:4px 8px 4px 6px;font-size:14px}.chip svg{width:17px;height:17px}.c-lang{padding:4px 8px;font-size:13px}}
+@media (max-width:390px){.top .wrap{gap:6px}.wm{font-size:21px}.logo svg{width:30px;height:30px}.chip{padding:4px 8px 4px 6px;font-size:14px}.chip svg{width:17px;height:17px}.c-lang{padding:4px 8px 4px 6px;font-size:13px}.flag{width:19px;height:13px}}
 .picker{min-height:100%;display:flex;flex-direction:column;justify-content:center;padding-block:28px calc(28px + env(safe-area-inset-bottom,0px))}
 .picker .pk-head{text-align:center}
 .picker .pk-head svg{width:110px;height:110px}
@@ -441,7 +443,7 @@ main.home{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
 .lcard{display:flex;align-items:center;gap:14px;width:100%;padding:16px;border-radius:20px;background:var(--surface);box-shadow:0 0 0 1px var(--line) inset,0 4px 0 var(--line);text-align:left;color:var(--ink)}
 .lcard:active{transform:translateY(2px);box-shadow:0 0 0 1px var(--line) inset,0 2px 0 var(--line)}
 .lcard[aria-current="true"]{box-shadow:0 0 0 2px var(--teal) inset,0 4px 0 var(--teal-d)}
-.lcard .fl{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:var(--teal);color:#fff;font-family:var(--f-display);font-size:19px;font-weight:800;letter-spacing:.04em;flex:none}
+.lcard .fl{display:block;width:58px;height:40px;border-radius:9px;overflow:hidden;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.14),0 3px 0 rgba(0,0,0,.12)}
 .lcard b{display:block;font-size:19px;font-weight:800}
 .lcard small{display:block;color:var(--muted);font-size:14px;margin-top:2px}
 .lcard .go2{margin-left:auto;color:var(--teal);font-weight:800;font-size:22px}
@@ -780,7 +782,7 @@ let view = 'path', L = null;
 function topBar(){
   return `<header class="top"><div class="wrap">
     <div class="logo" aria-label="Gokski">${LOGO}<span class="wm" aria-hidden="true"><span class="a">gok</span><span class="b">SKI</span></span></div>
-    ${netChip()}<button class="chip c-lang" data-langmenu title="ენის შეცვლა" aria-label="ენა: ${LG().ka}. შეცვლა">${LG().code}</button><span class="chip c-fire" title="დღეები ზედიზედ">${ICON.flame}${S.streak}</span>
+    ${netChip()}<button class="chip c-lang" data-langmenu title="ენის შეცვლა" aria-label="ენა: ${LG().ka}. შეცვლა">${flagHTML(LANG)}${LG().code}</button><span class="chip c-fire" title="დღეები ზედიზედ">${ICON.flame}${S.streak}</span>
     <span class="chip c-xp" title="სულ XP">${ICON.bolt}${S.xp}</span>
     <span class="chip c-heart" title="სიცოცხლეები">${ICON.heart}${S.hearts}</span>
   </div></header>`;
