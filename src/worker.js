@@ -36,10 +36,30 @@ export class GokskiStore extends DurableObject {
       reminded TEXT DEFAULT '', reminded2 TEXT DEFAULT '', reported TEXT DEFAULT '',
       chat TEXT DEFAULT '[]', started INTEGER DEFAULT 0, updated INTEGER DEFAULT 0)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS kv(k TEXT PRIMARY KEY, v TEXT)`);
+    // v4: როდის შემოვიდა და ბოლოს როდის გამოჩნდა
+    for (const col of ['joined', 'seen']) { try { this.sql.exec(`ALTER TABLE users ADD COLUMN ${col} INTEGER DEFAULT 0`); } catch (e) {} }
   }
+  // აბრუნებს true-ს, თუ მომხმარებელი ახალია
   touch(id, name, username) {
-    this.sql.exec(`INSERT INTO users(id, name, username, updated) VALUES(?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET name = excluded.name, username = excluded.username`, id, name || '', username || '', Date.now());
+    const now = Date.now();
+    const isNew = !this.sql.exec(`SELECT 1 FROM users WHERE id = ?`, id).toArray().length;
+    this.sql.exec(`INSERT INTO users(id, name, username, updated, joined, seen) VALUES(?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET name = CASE WHEN excluded.name != '' THEN excluded.name ELSE users.name END,
+        username = CASE WHEN excluded.username != '' THEN excluded.username ELSE users.username END, seen = excluded.seen`, id, name || '', username || '', now, now, now);
+    return isNew;
+  }
+  adminStats(now) {
+    const one = q => (this.sql.exec(q[0], ...q.slice(1)).toArray()[0] || {}).n || 0;
+    const weekStart = (Number(now.wk) * 864e5) - 4 * 3600e3;
+    return {
+      total: one([`SELECT COUNT(*) n FROM users`]),
+      started: one([`SELECT COUNT(*) n FROM users WHERE started = 1`]),
+      today: one([`SELECT COUNT(*) n FROM users WHERE last_day = ?`, now.today]),
+      week: one([`SELECT COUNT(*) n FROM users WHERE wk = ? AND wk_xp > 0`, now.wk]),
+      fresh: one([`SELECT COUNT(*) n FROM users WHERE joined >= ?`, weekStart]),
+      rows: this.sql.exec(`SELECT id, name, username, xp, streak, last_day, unit, tier, div, rp, wk, wk_xp, started, joined,
+        MAX(seen, updated) last FROM users ORDER BY last DESC LIMIT 30`).toArray(),
+    };
   }
   markStarted(id) { this.sql.exec(`UPDATE users SET started = 1 WHERE id = ?`, id); }
   progress(id, p) {
@@ -300,6 +320,7 @@ async function apiProgress(request, env, ctx, auth, origin) {
   const b = await request.json().catch(() => ({}));
   const u = auth.user;
   const st = store(env);
+  if (await st.touch(u.id, displayName(u), u.username || '')) ctx.waitUntil(notifyAdmin(env, u.id, u, 'აპი').catch(() => {}));
   const row = await st.progress(u.id, {
     name: displayName(u), username: u.username || '',
     xp: b.xp, streak: b.streak, lastDay: b.lastDay, unit: b.unit, tier: b.tier, div: b.div, rp: b.rp,
@@ -358,8 +379,9 @@ async function handleUpdate(env, update) {
   if (!m || !m.chat || m.chat.type !== 'private' || !m.from) return;
   const st = store(env);
   const id = m.from.id;
-  await st.touch(id, displayName(m.from), m.from.username || '');
+  const isNew = await st.touch(id, displayName(m.from), m.from.username || '');
   await st.markStarted(id);
+  if (isNew) await notifyAdmin(env, id, m.from, 'ბოტი');
   const origin = (await st.kvGet('origin')) || '';
   const say = (text, extra = {}) => tgCall(env, 'sendMessage', { chat_id: m.chat.id, text, ...extra });
   const openBtn = origin ? { reply_markup: { inline_keyboard: [[{ text: '📚 Gokski-ს გახსნა', web_app: { url: origin } }]] } } : {};
@@ -385,6 +407,11 @@ async function handleUpdate(env, update) {
     return say(on ? `⏰ შეხსენება ჩართულია (${(u && u.remind_hour) ?? 20}:00). დროის შესაცვლელად: /remind 21` : '🔕 შეხსენება გამორთულია. ჩასართავად ისევ დაწერე /remind');
   }
   if (text.startsWith('/reset')) { await st.setChat(id, []); return say('🧹 საუბარი თავიდან დავიწყეთ.'); }
+  if (text.startsWith('/myid')) return say(`შენი Telegram ID: ${id}`);
+  if (text.startsWith('/admin') || text.startsWith('/users')) {
+    if (!isAdmin(env, id)) return say('ეს ბრძანება მხოლოდ ბოტის მფლობელისთვისაა.');
+    return say(adminText(await st.adminStats(tbilisi()), text.startsWith('/users')));
+  }
   if (text.startsWith('/')) return say('ბრძანებები: /start, /stats, /remind, /reset');
 
   let input = text, heard = '';
@@ -438,6 +465,27 @@ Then continue the conversation.
   return answer;
 }
 
+// ====================== ADMIN ======================
+// ADMIN_ID — ბოტის მფლობელის Telegram ID (Cloudflare → Variables and Secrets)
+const isAdmin = (env, id) => !!env.ADMIN_ID && String(env.ADMIN_ID).trim() === String(id);
+async function notifyAdmin(env, id, from, via) {
+  if (!env.ADMIN_ID || isAdmin(env, id)) return;
+  const who = [displayName(from), from.username ? '@' + from.username : ''].filter(Boolean).join(' ');
+  await tgCall(env, 'sendMessage', { chat_id: String(env.ADMIN_ID).trim(), text: `🆕 ახალი მომხმარებელი (${via}): ${who}\nID: ${id}` });
+}
+function ago(ms) {
+  if (!ms) return '—';
+  const day = t => Math.floor((t + TZ_OFFSET_H * 3600e3) / 864e5);
+  const d = day(Date.now()) - day(ms);
+  return d <= 0 ? 'დღეს' : d === 1 ? 'გუშინ' : `${d} დღის წინ`;
+}
+function adminText(a, full) {
+  const head = `📊 Gokski — სტატისტიკა\n👥 სულ მომხმარებელი: ${a.total} (ბოტი დაიწყო: ${a.started})\n🟢 დღეს ივარჯიშა: ${a.today}\n📅 ამ კვირაში აქტიური: ${a.week}\n🆕 ახალი ამ კვირაში: ${a.fresh}`;
+  const rows = (full ? a.rows : a.rows.slice(0, 10)).map((u, i) =>
+    `${i + 1}. ${u.name || 'უსახელო'}${u.username ? ' @' + u.username : ''}\n   ნაწილი ${(u.unit || 0) + 1} · ${rankName(u)} · ${u.xp} XP · 🔥${u.streak} · ${ago(u.last)}`);
+  return `${head}\n\n${full ? 'ბოლოს აქტიურები (30):' : 'ბოლოს აქტიურები (10) — ყველა: /users'}\n${rows.join('\n') || '—'}`.slice(0, 4000);
+}
+
 // ====================== CRON ======================
 async function cron(env) {
   if (!env.TELEGRAM_BOT_TOKEN) return;
@@ -465,7 +513,7 @@ async function cron(env) {
 // ====================== HEALTH ======================
 // შემოწმების გვერდი: ჩანს, სწორადაა თუ არა გასაღებები ჩასმული (საიდუმლოებს არ აჩვენებს)
 async function apiHealth(env, origin) {
-  const out = { ok: true, bot_token: 'missing', bot_id: null, bot_username: null, openai_key: env.OPENAI_API_KEY ? 'set' : 'missing', workers_ai: !!env.AI, webhook: null };
+  const out = { ok: true, bot_token: 'missing', bot_id: null, bot_username: null, openai_key: env.OPENAI_API_KEY ? 'set' : 'missing', workers_ai: !!env.AI, webhook: null, admin_id: env.ADMIN_ID ? 'set' : 'missing (ბოტში /myid გაჩვენებს შენს ID-ს)' };
   if (env.TELEGRAM_BOT_TOKEN) {
     out.bot_id = env.TELEGRAM_BOT_TOKEN.split(':')[0];
     const me = await tgCall(env, 'getMe', {});
