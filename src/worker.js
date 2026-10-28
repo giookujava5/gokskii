@@ -107,11 +107,13 @@ export class GokskiStore extends DurableObject {
 // ====================== ROUTER ======================
 export default {
   async fetch(request, env, ctx) {
+    env = cleanEnv(env);
     const url = new URL(request.url);
     const p = url.pathname;
     if (!p.startsWith('/api/')) return env.ASSETS.fetch(request);
     try {
       if (p === '/api/tg') return await telegramWebhook(request, env, ctx);
+      if (p === '/api/health') return await apiHealth(env, url.origin);
       if (request.method !== 'POST' && !(p === '/api/tts' && request.method === 'GET')) return json({ error: 'Use POST' }, 405);
       const auth = await authenticate(request, env);
       if (auth instanceof Response) return auth;
@@ -127,7 +129,7 @@ export default {
     }
   },
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(cron(env));
+    ctx.waitUntil(cron(cleanEnv(env)));
   },
 };
 
@@ -460,7 +462,34 @@ async function cron(env) {
   }
 }
 
+// ====================== HEALTH ======================
+// შემოწმების გვერდი: ჩანს, სწორადაა თუ არა გასაღებები ჩასმული (საიდუმლოებს არ აჩვენებს)
+async function apiHealth(env, origin) {
+  const out = { ok: true, bot_token: 'missing', bot_id: null, bot_username: null, openai_key: env.OPENAI_API_KEY ? 'set' : 'missing', workers_ai: !!env.AI, webhook: null };
+  if (env.TELEGRAM_BOT_TOKEN) {
+    out.bot_id = env.TELEGRAM_BOT_TOKEN.split(':')[0];
+    const me = await tgCall(env, 'getMe', {});
+    if (me.ok) { out.bot_token = 'valid'; out.bot_username = '@' + me.result.username; }
+    else { out.bot_token = 'INVALID — Telegram-მა ეს ტოკენი არ მიიღო (BotFather-იდან ახალი ჩასვი)'; out.ok = false; }
+    if (me.ok) {
+      const wh = await tgCall(env, 'getWebhookInfo', {});
+      out.webhook = wh.ok ? (wh.result.url || 'ჯერ არ არის — გახსენი აპი ბოტიდან') : null;
+    }
+  } else out.ok = false;
+  if (env.OPENAI_API_KEY) {
+    const r = await fetch(`${openaiBase(env)}/models`, { headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}` } }).catch(() => null);
+    out.openai_key = r && r.ok ? 'valid' : `INVALID (${r ? r.status : 'network'}) — OpenAI-მ გასაღები არ მიიღო`;
+    if (!(r && r.ok)) out.ok = false;
+  }
+  return json(out);
+}
+
 // ====================== HELPERS ======================
+// ჩასმისას გაყოლილი ჰარები და ბრჭყალები აშორებს
+function cleanEnv(env) {
+  const fix = v => (typeof v === 'string' ? v.trim().replace(/^["']|["']$/g, '').trim() : v);
+  return new Proxy(env, { get: (t, k) => (k === 'TELEGRAM_BOT_TOKEN' || k === 'OPENAI_API_KEY' ? fix(t[k]) : t[k]) });
+}
 function tbilisi() {
   const t = new Date(Date.now() + TZ_OFFSET_H * 3600e3);
   const today = `${t.getUTCFullYear()}-${t.getUTCMonth() + 1}-${t.getUTCDate()}`;
